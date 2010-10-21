@@ -130,6 +130,16 @@ function OrlanStrike:CreateCastWindow()
 	castWindow.HolyPowerBar:SetPoint("BOTTOMLEFT", castWindow, "TOPLEFT", 0, 0);
 	castWindow.HolyPowerBar:SetHeight(3);
 
+	castWindow.HealthBar = castWindow:CreateTexture();
+	castWindow.HealthBar:SetPoint("BOTTOMRIGHT", castWindow, "BOTTOMLEFT", 0, 0);
+	castWindow.HealthBar:SetWidth(3);
+	castWindow.HealthBar:SetTexture(0, 1, 0, 0.5);
+
+	castWindow.ManaBar = castWindow:CreateTexture();
+	castWindow.ManaBar:SetPoint("BOTTOMLEFT", castWindow, "BOTTOMRIGHT", 0, 0);
+	castWindow.ManaBar:SetWidth(3);
+	castWindow.ManaBar:SetTexture(0.2, 0.2, 1, 0.7);
+
 	return castWindow;
 end;
 
@@ -285,6 +295,12 @@ function OrlanStrike:UpdateStatus()
 		self.CastWindow.HolyPowerBar:SetTexture(0, 1, 0, 0.3);
 	end;
 
+	local healthPercent = UnitHealth("player") / UnitHealthMax("player");
+	self.CastWindow.HealthBar:SetHeight(self.CastWindowHeight * healthPercent);
+
+	local manaPercent = UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA);
+	self.CastWindow.ManaBar:SetHeight(self.CastWindowHeight * manaPercent);
+
 	for spellIndex = 1, 15 do
 		local button = self.CastWindow.Buttons[spellIndex];
 
@@ -371,9 +387,9 @@ function OrlanStrike:UpdateStatus()
 			button:SetAlpha(1);
 			self:SetBorderColor(button, 1, 1, 1, 1);
 		elseif (button.SpellId == 31801) and not hasSealOfTruth then -- Seal of Truth
-			self:SetBorderColor(button, 0, 0, 1, 1);
+			self:SetBorderColor(button, 0.2, 0.2, 1, 1);
 		elseif (button.SpellId == 20154) and not hasSealOfRighteousness then -- Seal of Righteousness
-			self:SetBorderColor(button, 0, 0, 1, 1);
+			self:SetBorderColor(button, 0.2, 0.2, 1, 1);
 		end;
 	end;
 end;
