@@ -17,7 +17,7 @@ function OrlanStrike:Initialize(configName)
 	self.EventFrame = CreateFrame("Frame");
 	self.ButtonSize = 32;
 	self.ButtonSpacing = 5;
-	self.RowCount = 3;
+	self.RowCount = 4;
 	self.ColumnCount = 5;
 	self.CastWindowHeight = self.ButtonSize * self.RowCount + self.ButtonSpacing * (self.RowCount + 1);
 	self.CastWindowWidth = self.ButtonSize * self.ColumnCount + self.ButtonSpacing * (self.ColumnCount + 1);
@@ -93,6 +93,13 @@ function OrlanStrike:Initialize(configName)
 		35395 -- Crusader Strike
 	};
 	self.MaxAbilityWaitTime = 0.1;
+	self.HealingSpellPriorities =
+	{
+		85673, -- Word of Glory
+		19750, -- Flash of Light
+		633, -- Lay on Hands
+		642 -- Divine Shield
+	};
 end;
 
 function OrlanStrike:CreateCastWindow()
@@ -136,8 +143,14 @@ function OrlanStrike:CreateCastWindow()
 		self:CreateButton(castWindow, 86150, 2, 1), -- Guardian of Ancient Kings
 		self:CreateButton(castWindow, 54428, 2, 2), -- Divine Plea
 		self:CreateButton(castWindow, 31801, 2, 3), -- Seal of Truth
-		self:CreateButton(castWindow, 20154, 2, 4) -- Seal of Righteousness
+		self:CreateButton(castWindow, 20154, 2, 4), -- Seal of Righteousness
+		self:CreateButton(castWindow, 4987, 3, 0, true), -- Cleanse
+		self:CreateButton(castWindow, 85673, 3, 1, true), -- Word of Glory
+		self:CreateButton(castWindow, 19750, 3, 2, true), -- Flash of Light
+		self:CreateButton(castWindow, 633, 3, 3, true), -- Lay on Hands
+		self:CreateButton(castWindow, 642, 3, 4) -- Divine Shield
 	};
+	self.SpellCount = 20;
 
 	castWindow.HolyPowerBar = castWindow:CreateTexture();
 	castWindow.HolyPowerBar:SetPoint("BOTTOMLEFT", castWindow, "TOPLEFT", 0, 0);
@@ -146,7 +159,6 @@ function OrlanStrike:CreateCastWindow()
 	castWindow.HealthBar = castWindow:CreateTexture();
 	castWindow.HealthBar:SetPoint("BOTTOMRIGHT", castWindow, "BOTTOMLEFT", 0, 0);
 	castWindow.HealthBar:SetWidth(3);
-	castWindow.HealthBar:SetTexture(0, 1, 0, 0.5);
 
 	castWindow.ManaBar = castWindow:CreateTexture();
 	castWindow.ManaBar:SetPoint("BOTTOMLEFT", castWindow, "BOTTOMRIGHT", 0, 0);
@@ -160,7 +172,7 @@ function OrlanStrike:CreateCastWindow()
 	return castWindow;
 end;
 
-function OrlanStrike:CreateButton(parent, spellId, rowIndex, columnIndex)
+function OrlanStrike:CreateButton(parent, spellId, rowIndex, columnIndex, isOnSelf)
 	local button = CreateFrame("Frame", nil, parent);
 	button:SetPoint(
 		"TOPLEFT", 
@@ -183,6 +195,9 @@ function OrlanStrike:CreateButton(parent, spellId, rowIndex, columnIndex)
 	button.Spell:RegisterForClicks("LeftButtonDown");
 	button.Spell:SetAttribute("type", "spell");
 	button.Spell:SetAttribute("spell", spellId);
+	if isOnSelf then
+		button.Spell:SetAttribute("unit", "player");
+	end;
 
 	self:CreateBorder(button, 2, 2);
 
@@ -237,6 +252,7 @@ function OrlanStrike:HandleLoaded()
 	self.MultiTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.MultiTargetPriorities);
 	self.ZealotrySingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.ZealotrySingleTargetPriorities);
 	self.ZealotryMultiTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.ZealotryMultiTargetPriorities);
+	self.HealingSpellPriorityIndexes = self:CalculateSpellPriorityIndexes(self.HealingSpellPriorities);
 	self.DivinePleaSpellIndex = self:CalculateSpellIndex(54428); -- Divine Plea
 
 	self:Show();
@@ -257,7 +273,7 @@ end;
 
 function OrlanStrike:CalculateSpellIndex(spellId)
 	local result;
-	for index = 1, 15 do
+	for index = 1, self.SpellCount do
 		if self.CastWindow.Buttons[index].SpellId == spellId then
 			result = index;
 			break;
@@ -304,6 +320,8 @@ function OrlanStrike:UpdateStatus()
 	local hasInquisition = UnitBuff("player", inquisitionSpellName);
 	local avengingWrathSpellName = GetSpellInfo(31884); -- Avenging Wrath
 	local hasAvengingWrath = UnitBuff("player", avengingWrathSpellName);
+	local forbearanceSpellName = GetSpellInfo(25771); -- Forbearance
+	local hasForbearance = UnitDebuff("player", forbearanceSpellName);
 	local now = GetTime();
 
 	local holyPowerAmount = UnitPower("player", SPELL_POWER_HOLY_POWER);
@@ -325,6 +343,13 @@ function OrlanStrike:UpdateStatus()
 
 	local healthPercent = UnitHealth("player") / UnitHealthMax("player");
 	self.CastWindow.HealthBar:SetHeight(self.CastWindowHeight * healthPercent);
+	if healthPercent > 0.4 then
+		self.CastWindow.HealthBar:SetTexture(0, 1, 0, 0.5);
+	elseif healthPercent > 0.2 then
+		self.CastWindow.HealthBar:SetTexture(1, 0.5, 0, 1);
+	else
+		self.CastWindow.HealthBar:SetTexture(1, 0, 0, 1);
+	end;
 
 	local manaPercent = UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA);
 	self.CastWindow.ManaBar:SetHeight(self.CastWindowHeight * manaPercent);
@@ -350,7 +375,7 @@ function OrlanStrike:UpdateStatus()
 	else
 		gcdExpiration = now;
 	end;
-	for spellIndex = 1, 15 do
+	for spellIndex = 1, self.SpellCount do
 		local button = self.CastWindow.Buttons[spellIndex];
 
 		button:SetAlpha(0.5);
@@ -392,6 +417,14 @@ function OrlanStrike:UpdateStatus()
 		elseif button.SpellId == 26573 then -- Consecration
 			self.AreSpellsAtMaxPower[spellIndex] = UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA) > 0.666;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
+		elseif button.SpellId == 85673 then -- Word of Glory
+			self.AreSpellsAtMaxPower[spellIndex] = isLearned and ((holyPowerAmount == 3) or hasHandOfLight);
+			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
+			self.AreSpellsAvailable[spellIndex] = isLearned and ((holyPowerAmount > 0) or hasZealotry);
+		elseif button.SpellId == 633 then -- Lay on Hands
+			self.AreSpellsAvailable[spellIndex] = self.AreSpellsAvailable[spellIndex] and not hasForbearance;
+			self.AreSpellsAtMaxPower[spellIndex] = true;
+			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
 		else
 			self.AreSpellsAtMaxPower[spellIndex] = true;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
@@ -432,7 +465,7 @@ function OrlanStrike:UpdateStatus()
 	local sealOfRighteousnessSpellName = GetSpellInfo(20154); -- Seal of Righteousness
 	local hasSealOfRighteousness = UnitBuff("player", sealOfRighteousnessSpellName);
 
-	for spellIndex = 1, 15 do
+	for spellIndex = 1, self.SpellCount do
 		local button = self.CastWindow.Buttons[spellIndex];
 
 		self:UpdateButtonCooldown(button);
@@ -460,7 +493,45 @@ function OrlanStrike:UpdateStatus()
 			self:SetBorderColor(button, 0.2, 0.2, 1, 1);
 		elseif (button.SpellId == 20154) and not hasSealOfRighteousness then -- Seal of Righteousness
 			self:SetBorderColor(button, 0.2, 0.2, 1, 1);
+		elseif button.SpellId == 4987 then -- Cleanse
+			self:UpdateDispellButton(button);
 		end;
+	end;
+
+	local healingSpellIndex = 1;
+	while self.HealingSpellPriorityIndexes[healingSpellIndex] do
+		local spellIndex = self.HealingSpellPriorityIndexes[healingSpellIndex];
+		local button = self.CastWindow.Buttons[spellIndex];
+
+		if self.AreSpellsAvailable[spellIndex] and 
+				self.IsManaEnoughForSpells[spellIndex] and
+				self.SpellCooldownExpirations[spellIndex] < now + 1.5 then
+			if ((healthPercent <= 0.4) and (button.SpellId == 85673) and self.AreSpellsAtMaxPower[spellIndex]) or -- Word of Glory
+					(healthPercent <= 0.2) then
+				self:SetBorderColor(button, 1, 0.5, 0.5, 1);
+				button:SetAlpha(1);
+				break;
+			end;
+		end;
+
+		healingSpellIndex = healingSpellIndex + 1;
+	end;
+end;
+
+function OrlanStrike:UpdateDispellButton(button)
+	local debuffIndex = 1;
+	while true do
+		local debuffName, _, _, _, dispelType = UnitDebuff("player", debuffIndex);
+		if not debuffName then
+			break;
+		end;
+		if (dispelType == "Disease") or (dispelType == "Poison") then
+			self:SetBorderColor(button, 1, 0, 1, 1);
+			button:SetAlpha(1);
+			break;
+		end;
+
+		debuffIndex = debuffIndex + 1;
 	end;
 end;
 
@@ -489,7 +560,7 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 
 	local nextSpellCooldownExpirations = {};
 	if firstSpellIndex then
-		for spellIndex = 1, 15 do
+		for spellIndex = 1, self.SpellCount do
 			if self.SpellCooldownExpirations[spellIndex] < minCooldownExpiration + 1.5 then
 				nextSpellCooldownExpirations[spellIndex] = minCooldownExpiration + 1.5;
 			else
