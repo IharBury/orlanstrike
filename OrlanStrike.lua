@@ -163,7 +163,6 @@ function OrlanStrike:CreateCastWindow()
 	castWindow.ManaBar = castWindow:CreateTexture();
 	castWindow.ManaBar:SetPoint("BOTTOMLEFT", castWindow, "BOTTOMRIGHT", 0, 0);
 	castWindow.ManaBar:SetWidth(3);
-	castWindow.ManaBar:SetTexture(0.2, 0.2, 1, 0.7);
 
 	castWindow.ThreatBar = castWindow:CreateTexture();
 	castWindow.ThreatBar:SetPoint("TOPLEFT", castWindow, "BOTTOMLEFT", 0, 0);
@@ -297,10 +296,9 @@ end;
 function OrlanStrike:HandleCrusaderStrike()
 	local holyPowerAmount = UnitPower("player", SPELL_POWER_HOLY_POWER);
 	if holyPowerAmount < 3 then
-		local zealotrySpellName = GetSpellInfo(85696); -- Zealotry
-		local hasZealotry = UnitBuff("player", zealotrySpellName);
+		self:DetectZealotry();
 
-		if hasZealotry then
+		if self.HasZealotry then
 			self.HolyPowerOverride = 3;
 		else
 			self.HolyPowerOverride = holyPowerAmount + 1;
@@ -309,72 +307,158 @@ function OrlanStrike:HandleCrusaderStrike()
 	end;
 end;
 
-function OrlanStrike:UpdateStatus()
+function OrlanStrike:DetectZealotry()
 	local zealotrySpellName = GetSpellInfo(85696); -- Zealotry
-	local hasZealotry = UnitBuff("player", zealotrySpellName);
-	local artOfWarSpellName = GetSpellInfo(59578); -- Art of War
-	local hasArtOfWar = UnitBuff("player", artOfWarSpellName);
-	local handOfLightSpellName = GetSpellInfo(90174); -- Hand of Light
-	local hasHandOfLight = UnitBuff("player", handOfLightSpellName);
-	local inquisitionSpellName = GetSpellInfo(84963); -- Inquisition
-	local hasInquisition = UnitBuff("player", inquisitionSpellName);
-	local avengingWrathSpellName = GetSpellInfo(31884); -- Avenging Wrath
-	local hasAvengingWrath = UnitBuff("player", avengingWrathSpellName);
-	local forbearanceSpellName = GetSpellInfo(25771); -- Forbearance
-	local hasForbearance = UnitDebuff("player", forbearanceSpellName);
-	local now = GetTime();
+	self.HasZealotry = UnitBuff("player", zealotrySpellName);
+end;
 
-	local holyPowerAmount = UnitPower("player", SPELL_POWER_HOLY_POWER);
+function OrlanStrike:DetectArtOfWar()
+	local artOfWarSpellName = GetSpellInfo(59578); -- Art of War
+	self.HasArtOfWar = UnitBuff("player", artOfWarSpellName);
+end;
+
+function OrlanStrike:DetectHandOfLight()
+	local handOfLightSpellName = GetSpellInfo(90174); -- Hand of Light
+	self.HasHandOfLight = UnitBuff("player", handOfLightSpellName);
+end;
+
+function OrlanStrike:DetectInquisition()
+	local inquisitionSpellName = GetSpellInfo(84963); -- Inquisition
+	self.HasInquisition = UnitBuff("player", inquisitionSpellName);
+end;
+
+function OrlanStrike:DetectAvengingWrath()
+	local avengingWrathSpellName = GetSpellInfo(31884); -- Avenging Wrath
+	self.HasAvengingWrath = UnitBuff("player", avengingWrathSpellName);
+end;
+
+function OrlanStrike:DetectForbearance()
+	local forbearanceSpellName = GetSpellInfo(25771); -- Forbearance
+	self.HasForbearance = UnitDebuff("player", forbearanceSpellName);
+end;
+
+function OrlanStrike:DetectAuras()
+	self:DetectZealotry();
+	self:DetectArtOfWar();
+	self:DetectHandOfLight();
+	self:DetectInquisition();
+	self:DetectAvengingWrath();
+	self:DetectForbearance();
+end;
+
+function OrlanStrike:DetectHolyPower()
+	self.HolyPowerAmount = UnitPower("player", SPELL_POWER_HOLY_POWER);
 	if self.HolyPowerOverride and 
 			(self.HolyPowerOverrideTimeout > GetTime()) and
-			(self.HolyPowerOverride > holyPowerAmount) then
-		holyPowerAmount = self.HolyPowerOVerride;
+			(self.HolyPowerOverride > self.HolyPowerAmount) then
+		self.HolyPowerAmount = self.HolyPowerOVerride;
 	end;
-	self.CastWindow.HolyPowerBar:SetWidth(self.CastWindowWidth * holyPowerAmount / 3);
-	if holyPowerAmount == 0 then
+end;
+
+function OrlanStrike:DetectHealthPercent()
+	self.HealthPercent = UnitHealth("player") / UnitHealthMax("player");
+end;
+
+function OrlanStrike:DetectManaPercent()
+	self.ManaPercent = UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA);
+end;
+
+function OrlanStrike:DetectThreat()
+	self.IsTanking, _, self.ThreatPercent, self.RawThreatPercent, self.Threat = UnitDetailedThreatSituation("player", "target");
+end;
+
+function OrlanStrike:DetectNow()
+	self.Now = GetTime();
+end;
+
+function OrlanStrike:GetRawCooldownExpiration(spellId)
+	local expiration;
+	local start, duration = GetSpellCooldown(spellId);
+	if start and duration and (duration ~= 0) and (start + duration > self.Now) then
+		expiration = start + duration;
+	else
+		expiration = self.Now;
+	end;
+	return expiration;
+end;
+
+function OrlanStrike:GetCooldownExpiration(spellId)
+	local expiration = self:GetRawCooldownExpiration(spellId);
+	if expiration < self.GcdExpiration then
+		expiration = self.GcdExpiration;
+	end;
+	return expiration;
+end;
+
+function OrlanStrike:DetectGcd()
+	self.GcdExpiration = self:GetRawCooldownExpiration(20154); -- Seal of Righteousness
+end;
+
+function OrlanStrike:UpdateHolyPowerBar()
+	self.CastWindow.HolyPowerBar:SetWidth(self.CastWindowWidth * self.HolyPowerAmount / 3);
+	if self.HolyPowerAmount == 0 then
 		self.CastWindow.HolyPowerBar:SetTexture(0, 0, 0, 0);
-	elseif holyPowerAmount == 1 then
+	elseif self.HolyPowerAmount == 1 then
 		self.CastWindow.HolyPowerBar:SetTexture(1, 0, 0, 0.3);
-	elseif holyPowerAmount == 2 then
+	elseif self.HolyPowerAmount == 2 then
 		self.CastWindow.HolyPowerBar:SetTexture(1, 1, 0, 0.3);
 	else
 		self.CastWindow.HolyPowerBar:SetTexture(0, 1, 0, 0.3);
 	end;
+end;
 
-	local healthPercent = UnitHealth("player") / UnitHealthMax("player");
-	self.CastWindow.HealthBar:SetHeight(self.CastWindowHeight * healthPercent);
-	if healthPercent > 0.4 then
+function OrlanStrike:UpdateHealthBar()
+	self.CastWindow.HealthBar:SetHeight(self.CastWindowHeight * self.HealthPercent);
+	if self.HealthPercent > 0.4 then
 		self.CastWindow.HealthBar:SetTexture(0, 1, 0, 0.5);
-	elseif healthPercent > 0.2 then
+	elseif self.HealthPercent > 0.2 then
 		self.CastWindow.HealthBar:SetTexture(1, 0.5, 0, 1);
-	else
+	elseif self.HealthPercent > 0 then
 		self.CastWindow.HealthBar:SetTexture(1, 0, 0, 1);
+	else
+		self.CastWindow.HealthBar:SetTexture(0, 0, 0, 0);
 	end;
+end;
 
-	local manaPercent = UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA);
-	self.CastWindow.ManaBar:SetHeight(self.CastWindowHeight * manaPercent);
+function OrlanStrike:UpdateManaBar()
+	if self.ManaPercent > 0 then
+		self.CastWindow.ManaBar:SetHeight(self.CastWindowHeight * self.ManaPercent);
+		self.CastWindow.ManaBar:SetTexture(0.2, 0.2, 1, 0.7);
+	else
+		self.CastWindow.ManaBar:SetTexture(0, 0, 0, 0);
+	end;
+end;
 
-	local isTanking, _, threatPercent, rawThreatPercent, threat = UnitDetailedThreatSituation("player", "target");
-	if isTanking == nil then
+function OrlanStrike:UpdateThreatBar()
+	if not self.Threat then
 		self.CastWindow.ThreatBar:SetTexture(0, 0, 0, 0);
-	elseif isTanking then
+	elseif self.IsTanking then
 		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth);
 		self.CastWindow.ThreatBar:SetTexture(1, 0, 0, 1);
-	elseif threatPercent > 100 then
-		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth * threatPercent);
+	elseif self.ThreatPercent > 100 then
+		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth * self.ThreatPercent);
 		self.CastWindow.ThreatBar:SetTexture(1, 1, 0, 1);
 	else
-		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth * threatPercent);
+		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth * self.ThreatPercent);
 		self.CastWindow.ThreatBar:SetTexture(1, 0, 1, 0.5);
 	end;
+end;
 
-	local gcdExpiration;
-	local gcdStart, gcdDuration = GetSpellCooldown(20154); -- Seal of Righteousness
-	if gcdStart and gcdDuration and (gcdDuration ~= 0) and (gcdStart + gcdDuration > now) then
-		gcdExpiration = gcdStart + gcdDuration;
-	else
-		gcdExpiration = now;
-	end;
+function OrlanStrike:UpdateStatus()
+	self:DetectAuras();
+	self:DetectHolyPower();
+	self:DetectHealthPercent();
+	self:DetectManaPercent();
+	self:DetectThreat();
+
+	self:DetectNow();
+	self:DetectGcd();
+
+	self:UpdateHolyPowerBar();
+	self:UpdateHealthBar();
+	self:UpdateManaBar();
+	self:UpdateThreatBar();
+
 	for spellIndex = 1, self.SpellCount do
 		local button = self.CastWindow.Buttons[spellIndex];
 
@@ -386,43 +470,38 @@ function OrlanStrike:UpdateStatus()
 		self.AreSpellsAvailable[spellIndex] = isLearned and (isUsable or noMana);
 		self.IsManaEnoughForSpells[spellIndex] = isLearned and isUsable;
 
-		local expiration;
-		local start, duration, enabled = GetSpellCooldown(button.SpellId);
-		if start and duration and (duration ~= 0) and (enabled == 1) and (start + duration > gcdExpiration) then
-			self.SpellCooldownExpirations[spellIndex] = start + duration;
-		else
-			self.SpellCooldownExpirations[spellIndex] = gcdExpiration;
-		end;
+		self.SpellCooldownExpirations[spellIndex] = self:GetCooldownExpiration(button.SpellId);
 
 		if (button.SpellId == 85256) or  -- Templar's Verdict
 				(button.SpellId == 53385) then -- Divine Storm
-			self.AreSpellsAtMaxPower[spellIndex] = (holyPowerAmount == 3) or hasHandOfLight;
-			self.AreSpellsAlmostAtMaxPower[spellIndex] = not self.AreSpellsAtMaxPower[spellIndex] and (hasZealotry or (holyPowerAmount == 2));
-			self.AreSpellsAvailable[spellIndex] = isLearned and ((holyPowerAmount > 0) or hasZealotry);
+			self.AreSpellsAtMaxPower[spellIndex] = (self.HolyPowerAmount == 3) or self.HasHandOfLight;
+			self.AreSpellsAlmostAtMaxPower[spellIndex] = 
+				not self.AreSpellsAtMaxPower[spellIndex] and (self.HasZealotry or (self.HolyPowerAmount == 2));
+			self.AreSpellsAvailable[spellIndex] = isLearned and ((self.HolyPowerAmount > 0) or self.HasZealotry);
 		elseif button.SpellId == 879 then -- Exorcism
-			self.AreSpellsAtMaxPower[spellIndex] = hasArtOfWar;
+			self.AreSpellsAtMaxPower[spellIndex] = self.HasArtOfWar;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
 		elseif button.SpellId == 85696 then -- Zealotry
 			self.AreSpellsAtMaxPower[spellIndex] = isUsable;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = isLearned and 
 				(not isUsable) and 
 				(not noMana) and 
-				(hasZealotry or (holyPowerAmount == 2));
+				(self.HasZealotry or (self.HolyPowerAmount == 2));
 			self.AreSpellsAvailable[spellIndex] = isLearned and (isUsable or self.AreSpellsAlmostAtMaxPower[spellIndex]);
 		elseif button.SpellId == 84963 then -- Inquisition
-			self.AreSpellsAtMaxPower[spellIndex] = isUsable and not hasInquisition;
+			self.AreSpellsAtMaxPower[spellIndex] = isUsable and not self.HasInquisition;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = 
-				(not isUsable) and (not noMana) and (not hasInquisition) and (hasZealotry or (holyPowerAmount == 2));
+				(not isUsable) and (not noMana) and (not self.HasInquisition) and (self.HasZealotry or (self.HolyPowerAmount == 2));
 			self.AreSpellsAvailable[spellIndex] = isLearned and (isUsable or self.AreSpellsAlmostAtMaxPower[spellIndex]);
 		elseif button.SpellId == 26573 then -- Consecration
 			self.AreSpellsAtMaxPower[spellIndex] = UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA) > 0.666;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
 		elseif button.SpellId == 85673 then -- Word of Glory
-			self.AreSpellsAtMaxPower[spellIndex] = isLearned and ((holyPowerAmount == 3) or hasHandOfLight);
+			self.AreSpellsAtMaxPower[spellIndex] = isLearned and ((self.HolyPowerAmount == 3) or self.HasHandOfLight);
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
-			self.AreSpellsAvailable[spellIndex] = isLearned and ((holyPowerAmount > 0) or hasZealotry);
+			self.AreSpellsAvailable[spellIndex] = isLearned and ((self.HolyPowerAmount > 0) or self.HasZealotry);
 		elseif button.SpellId == 633 then -- Lay on Hands
-			self.AreSpellsAvailable[spellIndex] = self.AreSpellsAvailable[spellIndex] and not hasForbearance;
+			self.AreSpellsAvailable[spellIndex] = self.AreSpellsAvailable[spellIndex] and not self.HasForbearance;
 			self.AreSpellsAtMaxPower[spellIndex] = true;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
 		else
@@ -432,8 +511,8 @@ function OrlanStrike:UpdateStatus()
 	end;
 
 	local thisSingleTargetSpellIndex, nextSingleTargetSpellIndex, thisMultiTargetSpellIndex, nextMultiTargetSpellIndex;
-	if (isTanking == nil) or isTanking or ((rawThreatPercent < 99) and (threat * (1 - rawThreatPercent) / 100 < 30000 * 100)) then
-		if hasZealotry then
+	if (not self.Threat) or self.IsTanking or ((self.RawThreatPercent < 99) and (self.Threat * (1 - self.RawThreatPercent) / 100 < 30000 * 100)) then
+		if self.HasZealotry then
 			thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.ZealotrySingleTargetPriorityIndexes);
 			thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.ZealotryMultiTargetPriorityIndexes);
 		else
@@ -474,19 +553,19 @@ function OrlanStrike:UpdateStatus()
 			button:SetAlpha(0.1);
 		elseif (button.SpellId == 86150) and -- Guardian of the Ancient Kings
 				self.AreSpellsAtMaxPower[spellIndex] and
-				self.SpellCooldownExpirations[spellIndex] <= gcdExpiration then
+				self.SpellCooldownExpirations[spellIndex] <= self.GcdExpiration then
 			button:SetAlpha(1);
 			self:SetBorderColor(button, 1, 1, 1, 1);
 		elseif (button.SpellId == 85696) and -- Zealotry
-				not hasAvengingWrath and
+				not self.HasAvengingWrath and
 				self.AreSpellsAtMaxPower[spellIndex] and
-				self.SpellCooldownExpirations[spellIndex] <= gcdExpiration then
+				self.SpellCooldownExpirations[spellIndex] <= self.GcdExpiration then
 			button:SetAlpha(1);
 			self:SetBorderColor(button, 1, 1, 1, 1);
 		elseif (button.SpellId == 31884) and -- Avenging Wrath
-				not hasZealotry and
+				not self.HasZealotry and
 				self.AreSpellsAtMaxPower[spellIndex] and
-				self.SpellCooldownExpirations[spellIndex] <= gcdExpiration then
+				self.SpellCooldownExpirations[spellIndex] <= self.GcdExpiration then
 			button:SetAlpha(1);
 			self:SetBorderColor(button, 1, 1, 1, 1);
 		elseif (button.SpellId == 31801) and not hasSealOfTruth then -- Seal of Truth
@@ -505,9 +584,9 @@ function OrlanStrike:UpdateStatus()
 
 		if self.AreSpellsAvailable[spellIndex] and 
 				self.IsManaEnoughForSpells[spellIndex] and
-				self.SpellCooldownExpirations[spellIndex] < now + 1.5 then
-			if ((healthPercent <= 0.4) and (button.SpellId == 85673) and self.AreSpellsAtMaxPower[spellIndex]) or -- Word of Glory
-					(healthPercent <= 0.2) then
+				self.SpellCooldownExpirations[spellIndex] < self.Now + 1.5 then
+			if ((self.HealthPercent <= 0.4) and (button.SpellId == 85673) and self.AreSpellsAtMaxPower[spellIndex]) or -- Word of Glory
+					(self.HealthPercent <= 0.2) then
 				self:SetBorderColor(button, 1, 0.5, 0.5, 1);
 				button:SetAlpha(1);
 				break;
