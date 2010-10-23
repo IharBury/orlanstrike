@@ -52,7 +52,6 @@ function OrlanStrike:Initialize(configName)
 	self.CastWindowStrata = "LOW";
 	self.CastWindowName = "OrlanStrike_CastWindow";
 
-	self.IsManaEnoughForSpells = {};
 	self.AreSpellsAtMaxPower = {};
 	self.AreSpellsAlmostAtMaxPower = {};
 	self.SpellCooldownExpirations = {};
@@ -467,7 +466,7 @@ function OrlanStrike:UpdateStatus()
 		button.IsLearned = FindSpellBookSlotBySpellID(button.SpellId);
 		local isUsable, noMana = IsUsableSpell(button.SpellId);
 		button.IsAvailable = button.IsLearned and (isUsable or noMana);
-		self.IsManaEnoughForSpells[spellIndex] = button.IsLearned and isUsable;
+		button.IsManaEnough = button.IsLearned and isUsable;
 
 		self.SpellCooldownExpirations[spellIndex] = self:GetCooldownExpiration(button.SpellId);
 
@@ -548,7 +547,7 @@ function OrlanStrike:UpdateStatus()
 
 		self:UpdateButtonCooldown(button);
 
-		if not button.IsAvailable or not self.IsManaEnoughForSpells[spellIndex] then
+		if not button.IsAvailable or not button.IsManaEnough then
 			button:SetAlpha(0.1);
 		elseif (button.SpellId == 86150) and -- Guardian of the Ancient Kings
 				self.AreSpellsAtMaxPower[spellIndex] and
@@ -582,7 +581,7 @@ function OrlanStrike:UpdateStatus()
 		local button = self.CastWindow.Buttons[spellIndex];
 
 		if button.IsAvailable and 
-				self.IsManaEnoughForSpells[spellIndex] and
+				button.IsManaEnough and
 				self.SpellCooldownExpirations[spellIndex] < self.Now + 1.5 then
 			if ((self.HealthPercent <= 0.4) and (button.SpellId == 85673) and self.AreSpellsAtMaxPower[spellIndex]) or -- Word of Glory
 					(self.HealthPercent <= 0.2) then
@@ -623,7 +622,7 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 		local spellIndex = priorityIndexes[index];
 		local button = self.CastWindow.Buttons[spellIndex];
 		if button.IsAvailable and self.AreSpellsAtMaxPower[spellIndex] then
-			if not self.IsManaEnoughForSpells[spellIndex] then
+			if not button.IsManaEnough then
 				isManaLow = true;
 			end;
 
