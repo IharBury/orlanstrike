@@ -80,6 +80,18 @@ function OrlanStrike:Initialize(configName)
 		2812, -- Holy Wrath
 		26573 -- Consecration
 	};
+	self.ZealotrySingleTargetPriorities =
+	{
+		84963, -- Inquisition
+		85256, -- Templar's Verdict
+		35395 -- Crusader Strike
+	};
+	self.ZealotryMultiTargetPriorities =
+	{
+		84963, -- Inquisition
+		53385, -- Divine Storm
+		35395 -- Crusader Strike
+	};
 end;
 
 function OrlanStrike:CreateCastWindow()
@@ -222,6 +234,8 @@ function OrlanStrike:HandleLoaded()
 	self.CastWindow = self:CreateCastWindow();
 	self.SingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.SingleTargetPriorities);
 	self.MultiTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.MultiTargetPriorities);
+	self.ZealotrySingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.ZealotrySingleTargetPriorities);
+	self.ZealotryMultiTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.ZealotryMultiTargetPriorities);
 	self.DivinePleaSpellIndex = self:CalculateSpellIndex(54428); -- Divine Plea
 
 	self:Show();
@@ -266,7 +280,14 @@ end;
 function OrlanStrike:HandleCrusaderStrike()
 	local holyPowerAmount = UnitPower("player", SPELL_POWER_HOLY_POWER);
 	if holyPowerAmount < 3 then
-		self.HolyPowerOverride = holyPowerAmount + 1;
+		local zealotrySpellName = GetSpellInfo(85696); -- Zealotry
+		local hasZealotry = UnitBuff("player", zealotrySpellName);
+
+		if hasZealotry then
+			self.HolyPowerOverride = 3;
+		else
+			self.HolyPowerOverride = holyPowerAmount + 1;
+		end;
 		self.HolyPowerOverrideTimeout = GetTime() + 1;
 	end;
 end;
@@ -280,6 +301,8 @@ function OrlanStrike:UpdateStatus()
 	local hasHandOfLight = UnitBuff("player", handOfLightSpellName);
 	local inquisitionSpellName = GetSpellInfo(84963); -- Inquisition
 	local hasInquisition = UnitBuff("player", inquisitionSpellName);
+	local avengingWrathSpellName = GetSpellInfo(31884); -- Avenging Wrath
+	local hasAvengingWrath = UnitBuff("player", avengingWrathSpellName);
 	local now = GetTime();
 
 	local holyPowerAmount = UnitPower("player", SPELL_POWER_HOLY_POWER);
@@ -319,6 +342,13 @@ function OrlanStrike:UpdateStatus()
 		self.CastWindow.ThreatBar:SetTexture(1, 0, 1, 0.5);
 	end;
 
+	local gcdExpiration;
+	local gcdStart, gcdDuration = GetSpellCooldown(20154); -- Seal of Righteousness
+	if gcdStart and gcdDuration and (gcdDuration ~= 0) and (gcdStart + gcdDuration > now) then
+		gcdExpiration = gcdStart + gcdDuration;
+	else
+		gcdExpiration = now;
+	end;
 	for spellIndex = 1, 15 do
 		local button = self.CastWindow.Buttons[spellIndex];
 
@@ -332,26 +362,17 @@ function OrlanStrike:UpdateStatus()
 
 		local expiration;
 		local start, duration, enabled = GetSpellCooldown(button.SpellId);
-		if start and duration and (duration ~= 0) and (enabled == 1) then
+		if start and duration and (duration ~= 0) and (enabled == 1) and (start + duration > gcdExpiration) then
 			self.SpellCooldownExpirations[spellIndex] = start + duration;
 		else
-			self.SpellCooldownExpirations[spellIndex] = now;
-		end;
-
-		-- Under Zealotry wait for up to 0.7 sec for Crusader Strike
-		if (button.SpellId == 35395) and hasZealotry then -- Crusader Strike
-			if self.SpellCooldownExpirations[spellIndex] - 0.7 < now then
-				self.SpellCooldownExpirations[spellIndex] = now;
-			else
-				self.SpellCooldownExpirations[spellIndex] = self.SpellCooldownExpirations[spellIndex] - 0.7;
-			end;
+			self.SpellCooldownExpirations[spellIndex] = gcdExpiration;
 		end;
 
 		if (button.SpellId == 85256) or  -- Templar's Verdict
 				(button.SpellId == 53385) then -- Divine Storm
 			self.AreSpellsAtMaxPower[spellIndex] = (holyPowerAmount == 3) or hasHandOfLight;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = not self.AreSpellsAtMaxPower[spellIndex] and (hasZealotry or (holyPowerAmount == 2));
-			self.AreSpellsAvailable[spellIndex] = isLearned and (isUsable or hasZealotry);
+			self.AreSpellsAvailable[spellIndex] = isLearned and ((holyPowerAmount > 0) or hasZealotry);
 		elseif button.SpellId == 879 then -- Exorcism
 			self.AreSpellsAtMaxPower[spellIndex] = hasArtOfWar;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
@@ -367,7 +388,7 @@ function OrlanStrike:UpdateStatus()
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = 
 				(not isUsable) and (not noMana) and (not hasInquisition) and (hasZealotry or (holyPowerAmount == 2));
 			self.AreSpellsAvailable[spellIndex] = isLearned and (isUsable or self.AreSpellsAlmostAtMaxPower[spellIndex]);
-		elseif button.SpellId == 26573 then
+		elseif button.SpellId == 26573 then -- Consecration
 			self.AreSpellsAtMaxPower[spellIndex] = UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA) > 0.666;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
 		else
@@ -378,8 +399,13 @@ function OrlanStrike:UpdateStatus()
 
 	local thisSingleTargetSpellIndex, nextSingleTargetSpellIndex, thisMultiTargetSpellIndex, nextMultiTargetSpellIndex;
 	if (isTanking == nil) or isTanking or ((rawThreatPercent < 99) and (threat * (1 - rawThreatPercent) / 100 < 30000 * 100)) then
-		thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.SingleTargetPriorityIndexes);
-		thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.MultiTargetPriorityIndexes);
+		if hasZealotry then
+			thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.ZealotrySingleTargetPriorityIndexes);
+			thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.ZealotryMultiTargetPriorityIndexes);
+		else
+			thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.SingleTargetPriorityIndexes);
+			thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.MultiTargetPriorityIndexes);
+		end;
 	end;
 
 	if nextSingleTargetSpellIndex then
@@ -412,11 +438,21 @@ function OrlanStrike:UpdateStatus()
 
 		if not self.AreSpellsAvailable[spellIndex] or not self.IsManaEnoughForSpells[spellIndex] then
 			button:SetAlpha(0.1);
-		elseif ((button.SpellId == 85696) or -- Zealotry
-					(button.SpellId == 31884) or -- Avenging Wrath
-					(button.SpellId == 86150)) and -- Guardian of the Ancient Kings
+		elseif (button.SpellId == 86150) and -- Guardian of the Ancient Kings
 				self.AreSpellsAtMaxPower[spellIndex] and
-				self.SpellCooldownExpirations[spellIndex] <= now + 1.5 then
+				self.SpellCooldownExpirations[spellIndex] <= gcdExpiration then
+			button:SetAlpha(1);
+			self:SetBorderColor(button, 1, 1, 1, 1);
+		elseif (button.SpellId == 85696) and -- Zealotry
+				not hasAvengingWrath and
+				self.AreSpellsAtMaxPower[spellIndex] and
+				self.SpellCooldownExpirations[spellIndex] <= gcdExpiration then
+			button:SetAlpha(1);
+			self:SetBorderColor(button, 1, 1, 1, 1);
+		elseif (button.SpellId == 31884) and -- Avenging Wrath
+				not hasZealotry and
+				self.AreSpellsAtMaxPower[spellIndex] and
+				self.SpellCooldownExpirations[spellIndex] <= gcdExpiration then
 			button:SetAlpha(1);
 			self:SetBorderColor(button, 1, 1, 1, 1);
 		elseif (button.SpellId == 31801) and not hasSealOfTruth then -- Seal of Truth
