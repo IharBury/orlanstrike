@@ -92,6 +92,7 @@ function OrlanStrike:Initialize(configName)
 		53385, -- Divine Storm
 		35395 -- Crusader Strike
 	};
+	self.MaxAbilityWaitTime = 0.1;
 end;
 
 function OrlanStrike:CreateCastWindow()
@@ -476,7 +477,7 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 				isManaLow = true;
 			end;
 
-			if (not minCooldownExpiration) or (minCooldownExpiration > self.SpellCooldownExpirations[spellIndex]) then
+			if (not minCooldownExpiration) or (minCooldownExpiration - self.MaxAbilityWaitTime > self.SpellCooldownExpirations[spellIndex]) then
 				minCooldownExpiration = self.SpellCooldownExpirations[spellIndex];
 				firstSpellIndex = spellIndex;
 				firstSpellId = self.CastWindow.Buttons[firstSpellIndex].SpellId;
@@ -521,7 +522,7 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 		if (UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA) < 0.9) and
 				self.AreSpellsAvailable[self.DivinePleaSpellIndex] and
 				(self.SpellCooldownExpirations[self.DivinePleaSpellIndex] <= minCooldownExpiration) and
-				(isManaLow or (minCooldownExpiration >= GetTime() + 1.5)) then
+				(isManaLow or (minCooldownExpiration >= GetTime() + 1.5 + self.MaxAbilityWaitTime)) then
 			nextSpellIndex = firstSpellIndex;
 			firstSpellIndex = self.DivinePleaSpellIndex;
 		end;
