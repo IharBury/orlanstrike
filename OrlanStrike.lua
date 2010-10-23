@@ -132,7 +132,7 @@ function OrlanStrike:CreateCastWindow()
 		self:CreateButton(castWindow, self.Button, 20271, 1, 1), -- Judgement
 		self:CreateButton(castWindow, self.Button, 2812, 1, 2), -- Holy Wrath
 		self:CreateButton(castWindow, self.Button, 26573, 1, 3), -- Consecration
-		self:CreateButton(castWindow, self.Button, 85696, 1, 4), -- Zealotry
+		self:CreateButton(castWindow, self.ZealotryButton, nil, 1, 4), -- Zealotry
 		self:CreateButton(castWindow, self.Button, 31884, 2, 0), -- Avenging Wrath
 		self:CreateButton(castWindow, self.Button, 86150, 2, 1), -- Guardian of Ancient Kings
 		self:CreateButton(castWindow, self.Button, 54428, 2, 2), -- Divine Plea
@@ -468,14 +468,7 @@ function OrlanStrike:UpdateStatus()
 		button:UpdateState();
 		local isUsable, noMana = IsUsableSpell(button.SpellId);
 
-		if button.SpellId == 85696 then -- Zealotry
-			button.IsAtMaxPower = isUsable;
-			button.IsAlmostAtMaxPower = button.IsLearned and 
-				(not isUsable) and 
-				(not noMana) and 
-				(self.HasZealotry or (self.HolyPowerAmount == 2));
-			button.IsAvailable = button.IsLearned and (isUsable or button.IsAlmostAtMaxPower);
-		elseif button.SpellId == 84963 then -- Inquisition
+		if button.SpellId == 84963 then -- Inquisition
 			button.IsAtMaxPower = isUsable and not self.HasInquisition;
 			button.IsAlmostAtMaxPower = 
 				(not isUsable) and (not noMana) and (not self.HasInquisition) and (self.HasZealotry or (self.HolyPowerAmount == 2));
@@ -747,5 +740,23 @@ function OrlanStrike.ExorcismButton:UpdateState()
 
 	self.IsAtMaxPower = self.OrlanStrike.HasArtOfWar;
 end;
+
+
+OrlanStrike.ZealotryButton =
+{
+	SpellId = 85696
+};
+OrlanStrike.Button:CloneTo(OrlanStrike.ZealotryButton);
+
+function OrlanStrike.ZealotryButton:UpdateState()
+	self.OrlanStrike.Button.UpdateState(self);
+
+	self.IsAvailable = self.IsLearned;
+	self.IsAtMaxPower = self.OrlanStrike.HasHandOfLight or (self.OrlanStrike.HolyPowerAmount == 3);
+	self.IsAlmostAtMaxPower = self.IsLearned and 
+		(not self.IsAtMaxPower) and
+		(self.HasZealotry or (self.HolyPowerAmount == 2));
+end;
+
 
 OrlanStrike:Initialize("OrlanStrikeConfig");
