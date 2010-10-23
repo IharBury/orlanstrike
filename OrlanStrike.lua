@@ -140,6 +140,10 @@ function OrlanStrike:CreateCastWindow()
 	castWindow.ManaBar:SetWidth(3);
 	castWindow.ManaBar:SetTexture(0.2, 0.2, 1, 0.7);
 
+	castWindow.ThreatBar = castWindow:CreateTexture();
+	castWindow.ThreatBar:SetPoint("TOPLEFT", castWindow, "BOTTOMLEFT", 0, 0);
+	castWindow.ThreatBar:SetHeight(3);
+
 	return castWindow;
 end;
 
@@ -301,6 +305,20 @@ function OrlanStrike:UpdateStatus()
 	local manaPercent = UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA);
 	self.CastWindow.ManaBar:SetHeight(self.CastWindowHeight * manaPercent);
 
+	local isTanking, _, threatPercent, rawThreatPercent, threat = UnitDetailedThreatSituation("player", "target");
+	if isTanking == nil then
+		self.CastWindow.ThreatBar:SetTexture(0, 0, 0, 0);
+	elseif isTanking then
+		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth);
+		self.CastWindow.ThreatBar:SetTexture(1, 0, 0, 1);
+	elseif threatPercent > 100 then
+		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth * threatPercent);
+		self.CastWindow.ThreatBar:SetTexture(1, 1, 0, 1);
+	else
+		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth * threatPercent);
+		self.CastWindow.ThreatBar:SetTexture(1, 0, 1, 0.5);
+	end;
+
 	for spellIndex = 1, 15 do
 		local button = self.CastWindow.Buttons[spellIndex];
 
@@ -328,9 +346,12 @@ function OrlanStrike:UpdateStatus()
 		elseif button.SpellId == 879 then -- Exorcism
 			self.AreSpellsAtMaxPower[spellIndex] = hasArtOfWar;
 			self.AreSpellsAlmostAtMaxPower[spellIndex] = false;
-		elseif button.SpellId == 85696 then -- Inquisition
+		elseif button.SpellId == 85696 then -- Zealotry
 			self.AreSpellsAtMaxPower[spellIndex] = isUsable;
-			self.AreSpellsAlmostAtMaxPower[spellIndex] = (not isUsable) and (not noMana) and (hasZealotry or (holyPowerAmount == 2));
+			self.AreSpellsAlmostAtMaxPower[spellIndex] = isLearned and 
+				(not isUsable) and 
+				(not noMana) and 
+				(hasZealotry or (holyPowerAmount == 2));
 			self.AreSpellsAvailable[spellIndex] = isLearned and (isUsable or self.AreSpellsAlmostAtMaxPower[spellIndex]);
 		elseif button.SpellId == 84963 then -- Inquisition
 			self.AreSpellsAtMaxPower[spellIndex] = isUsable and not hasInquisition;
@@ -346,8 +367,11 @@ function OrlanStrike:UpdateStatus()
 		end
 	end;
 
-	local thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.SingleTargetPriorityIndexes);
-	local thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.MultiTargetPriorityIndexes);
+	local thisSingleTargetSpellIndex, nextSingleTargetSpellIndex, thisMultiTargetSpellIndex, nextMultiTargetSpellIndex;
+	if (isTanking == nil) or isTanking or ((rawThreatPercent < 99) and (threat * (1 - rawThreatPercent) / 100 < 30000 * 100)) then
+		thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.SingleTargetPriorityIndexes);
+		thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.MultiTargetPriorityIndexes);
+	end;
 
 	if nextSingleTargetSpellIndex then
 		self:SetTopLeftBorderColor(self.CastWindow.Buttons[nextSingleTargetSpellIndex], 1, 1, 0, 1);
@@ -383,7 +407,7 @@ function OrlanStrike:UpdateStatus()
 					(button.SpellId == 31884) or -- Avenging Wrath
 					(button.SpellId == 86150)) and -- Guardian of the Ancient Kings
 				self.AreSpellsAtMaxPower[spellIndex] and
-				self.SpellCooldownExpirations[spellIndex] == now then
+				self.SpellCooldownExpirations[spellIndex] <= now + 1.5 then
 			button:SetAlpha(1);
 			self:SetBorderColor(button, 1, 1, 1, 1);
 		elseif (button.SpellId == 31801) and not hasSealOfTruth then -- Seal of Truth
