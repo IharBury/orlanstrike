@@ -338,6 +338,15 @@ function OrlanStrike:UpdateStatus()
 			self.SpellCooldownExpirations[spellIndex] = now;
 		end;
 
+		-- Under Zealotry wait for up to 0.7 sec for Crusader Strike
+		if (button.SpellId == 35395) and hasZealotry then -- Crusader Strike
+			if self.SpellCooldownExpirations[spellIndex] - 0.7 < now then
+				self.SpellCooldownExpirations[spellIndex] = now;
+			else
+				self.SpellCooldownExpirations[spellIndex] = self.SpellCooldownExpirations[spellIndex] - 0.7;
+			end;
+		end;
+
 		if (button.SpellId == 85256) or  -- Templar's Verdict
 				(button.SpellId == 53385) then -- Divine Storm
 			self.AreSpellsAtMaxPower[spellIndex] = (holyPowerAmount == 3) or hasHandOfLight;
