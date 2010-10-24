@@ -27,6 +27,8 @@ function OrlanStrike:Initialize(configName)
 	function self.EventFrame:HandleEvent(event, arg1, arg2, arg3, arg4, arg5)
 		if (event == "ADDON_LOADED") and (arg1 == "OrlanStrike") then
 			orlanStrike:HandleLoaded();
+		elseif (event == "ACTIVE_TALENT_GROUP_CHANGED") then
+			orlanStrike:HandleTalentChange();
 		elseif (event == "UNIT_SPELLCAST_START") and
 				(arg1 == "player") and
 				(arg5 == 35395) then -- Crusader Strike
@@ -34,20 +36,8 @@ function OrlanStrike:Initialize(configName)
 		end;
 	end;
 
-	self.ElapsedAfterUpdate = 0;
-	function self.EventFrame:HandleUpdate(elapsed)
-		if orlanStrike.CastWindow:IsShown() then
-			orlanStrike.ElapsedAfterUpdate = orlanStrike.ElapsedAfterUpdate + elapsed;
-			if orlanStrike.ElapsedAfterUpdate > 1.0 / orlanStrike.FrameRate then
-				orlanStrike:UpdateStatus();
-				orlanStrike.ElapsedAfterUpdate = 0;
-			end;
-		end;
-	end;
-
 	self.EventFrame:RegisterEvent("ADDON_LOADED");
 	self.EventFrame:SetScript("OnEvent", self.EventFrame.HandleEvent);
-	self.EventFrame:SetScript("OnUpdate", self.EventFrame.HandleUpdate);
 
 	self.CastWindowStrata = "LOW";
 	self.CastWindowName = "OrlanStrike_CastWindow";
@@ -123,7 +113,7 @@ function OrlanStrike:CreateCastWindow()
 
 	castWindow.Buttons =
 	{
-		self:CreateButton(castWindow, self.Button, 84963, 0, 0), -- Inquisition
+		self:CreateButton(castWindow, self.InquisitionButton, nil, 0, 0), -- Inquisition
 		self:CreateButton(castWindow, self.HolyPowerScaledButton, 85256, 0, 1), -- Templar's Verdict
 		self:CreateButton(castWindow, self.HolyPowerScaledButton, 53385, 0, 2), -- Divine Storm
 		self:CreateButton(castWindow, self.Button, 35395, 0, 3), -- Crusader Strike
@@ -131,7 +121,7 @@ function OrlanStrike:CreateCastWindow()
 		self:CreateButton(castWindow, self.ExorcismButton, nil, 1, 0), -- Exorcism
 		self:CreateButton(castWindow, self.Button, 20271, 1, 1), -- Judgement
 		self:CreateButton(castWindow, self.Button, 2812, 1, 2), -- Holy Wrath
-		self:CreateButton(castWindow, self.Button, 26573, 1, 3), -- Consecration
+		self:CreateButton(castWindow, self.ConsecrationButton, nil, 1, 3), -- Consecration
 		self:CreateButton(castWindow, self.ZealotryButton, nil, 1, 4), -- Zealotry
 		self:CreateButton(castWindow, self.Button, 31884, 2, 0), -- Avenging Wrath
 		self:CreateButton(castWindow, self.Button, 86150, 2, 1), -- Guardian of Ancient Kings
@@ -139,7 +129,7 @@ function OrlanStrike:CreateCastWindow()
 		self:CreateButton(castWindow, self.Button, 31801, 2, 3), -- Seal of Truth
 		self:CreateButton(castWindow, self.Button, 20154, 2, 4), -- Seal of Righteousness
 		self:CreateButton(castWindow, self.Button, 4987, 3, 0, true), -- Cleanse
-		self:CreateButton(castWindow, self.Button, 85673, 3, 1, true), -- Word of Glory
+		self:CreateButton(castWindow, self.HolyPowerScaledButton, 85673, 3, 1, true), -- Word of Glory
 		self:CreateButton(castWindow, self.Button, 19750, 3, 2, true), -- Flash of Light
 		self:CreateButton(castWindow, self.Button, 633, 3, 3, true), -- Lay on Hands
 		self:CreateButton(castWindow, self.Button, 642, 3, 4) -- Divine Shield
@@ -256,7 +246,39 @@ function OrlanStrike:HandleLoaded()
 
 	self:Show();
 
+	self.EventFrame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED");
 	self.EventFrame:RegisterEvent("UNIT_SPELLCAST_START");
+
+	local orlanStrike = self;
+	self.ElapsedAfterUpdate = 0;
+	function self.EventFrame:HandleUpdate(elapsed)
+		if not orlanStrike.IsTalentTreeUpdated then
+			orlanStrike:UpdateTalentTree();
+		end;
+		if orlanStrike.CastWindow:IsShown() then
+			orlanStrike.ElapsedAfterUpdate = orlanStrike.ElapsedAfterUpdate + elapsed;
+			if orlanStrike.ElapsedAfterUpdate > 1.0 / orlanStrike.FrameRate then
+				orlanStrike:UpdateStatus();
+				orlanStrike.ElapsedAfterUpdate = 0;
+			end;
+		end;
+	end;
+	self.EventFrame:SetScript("OnUpdate", self.EventFrame.HandleUpdate);
+end;
+
+function OrlanStrike:HandleTalentChange()
+	self.IsTalentTreeUpdated = false;
+end;
+
+function OrlanStrike:UpdateTalentTree()
+	local tree = GetPrimaryTalentTree();
+	if (tree == 3) then
+		self:Show();
+		self.IsTalentTreeUpdated = true;
+	elseif tree then
+		self:Hide();
+		self.IsTalentTreeUpdated = true;
+	end;
 end;
 
 function OrlanStrike:CalculateSpellPriorityIndexes(priorities)
@@ -468,19 +490,7 @@ function OrlanStrike:UpdateStatus()
 		button:UpdateState();
 		local isUsable, noMana = IsUsableSpell(button.SpellId);
 
-		if button.SpellId == 84963 then -- Inquisition
-			button.IsAtMaxPower = isUsable and not self.HasInquisition;
-			button.IsAlmostAtMaxPower = 
-				(not isUsable) and (not noMana) and (not self.HasInquisition) and (self.HasZealotry or (self.HolyPowerAmount == 2));
-			button.IsAvailable = button.IsLearned and (isUsable or button.IsAlmostAtMaxPower);
-		elseif button.SpellId == 26573 then -- Consecration
-			button.IsAtMaxPower = UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA) > 0.666;
-			button.IsAlmostAtMaxPower = false;
-		elseif button.SpellId == 85673 then -- Word of Glory
-			button.IsAtMaxPower = button.IsLearned and ((self.HolyPowerAmount == 3) or self.HasHandOfLight);
-			button.IsAlmostAtMaxPower = false;
-			button.IsAvailable = button.IsLearned and ((self.HolyPowerAmount > 0) or self.HasZealotry);
-		elseif button.SpellId == 633 then -- Lay on Hands
+		if button.SpellId == 633 then -- Lay on Hands
 			button.IsAvailable = button.IsAvailable and not self.HasForbearance;
 			button.IsAtMaxPower = true;
 			button.IsAlmostAtMaxPower = false;
@@ -742,13 +752,10 @@ function OrlanStrike.ExorcismButton:UpdateState()
 end;
 
 
-OrlanStrike.ZealotryButton =
-{
-	SpellId = 85696
-};
-OrlanStrike.Button:CloneTo(OrlanStrike.ZealotryButton);
+OrlanStrike.MaxHolyPowerButton = {};
+OrlanStrike.Button:CloneTo(OrlanStrike.MaxHolyPowerButton);
 
-function OrlanStrike.ZealotryButton:UpdateState()
+function OrlanStrike.MaxHolyPowerButton:UpdateState()
 	self.OrlanStrike.Button.UpdateState(self);
 
 	self.IsAvailable = self.IsLearned;
@@ -756,6 +763,47 @@ function OrlanStrike.ZealotryButton:UpdateState()
 	self.IsAlmostAtMaxPower = self.IsLearned and 
 		(not self.IsAtMaxPower) and
 		(self.HasZealotry or (self.HolyPowerAmount == 2));
+end;
+
+
+OrlanStrike.ZealotryButton =
+{
+	SpellId = 85696
+};
+OrlanStrike.MaxHolyPowerButton:CloneTo(OrlanStrike.ZealotryButton);
+
+function OrlanStrike.ZealotryButton:UpdateState()
+	self.OrlanStrike.MaxHolyPowerButton.UpdateState(self);
+
+	self.IsAtMaxPower = self.IsAtMaxPower and not (self.OrlanStrike.HasZealotry or self.OrlanStrike.HasAvengingWrath);
+	self.IsAlmostAtMaxPower = self.IsAlmostAtMaxPower and not (self.OrlanStrike.HasZealotry or self.OrlanStrike.HasAvengingWrath);
+end;
+
+
+OrlanStrike.InquisitionButton =
+{
+	SpellId = 84963
+};
+OrlanStrike.MaxHolyPowerButton:CloneTo(OrlanStrike.InquisitionButton);
+
+function OrlanStrike.InquisitionButton:UpdateState()
+	self.OrlanStrike.MaxHolyPowerButton.UpdateState(self);
+
+	self.IsAtMaxPower = self.IsAtMaxPower and not (self.OrlanStrike.HasZealotry or self.OrlanStrike.HasAvengingWrath);
+	self.IsAlmostAtMaxPower = self.IsAlmostAtMaxPower and not (self.OrlanStrike.HasZealotry or self.OrlanStrike.HasAvengingWrath);
+end;
+
+
+OrlanStrike.ConsecrationButton =
+{
+	SpellId = 26573
+};
+OrlanStrike.Button:CloneTo(OrlanStrike.ConsecrationButton);
+
+function OrlanStrike.ConsecrationButton:UpdateStatus()
+	self.OrlanStrike.Button.UpdateState(self);
+
+	self.IsAtMaxPower = self.OrlanHeal.ManaPercent > 0.666;
 end;
 
 
