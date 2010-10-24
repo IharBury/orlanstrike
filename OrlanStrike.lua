@@ -131,7 +131,7 @@ function OrlanStrike:CreateCastWindow()
 		self:CreateButton(castWindow, self.Button, 4987, 3, 0, true), -- Cleanse
 		self:CreateButton(castWindow, self.HolyPowerScaledButton, 85673, 3, 1, true), -- Word of Glory
 		self:CreateButton(castWindow, self.Button, 19750, 3, 2, true), -- Flash of Light
-		self:CreateButton(castWindow, self.Button, 633, 3, 3, true), -- Lay on Hands
+		self:CreateButton(castWindow, self.LayOnHandsButton, nil, 3, 3, true), -- Lay on Hands
 		self:CreateButton(castWindow, self.Button, 642, 3, 4) -- Divine Shield
 	};
 	self.SpellCount = 20;
@@ -488,13 +488,6 @@ function OrlanStrike:UpdateStatus()
 		self:SetBorderColor(button, 0, 0, 0, 0);
 
 		button:UpdateState();
-		local isUsable, noMana = IsUsableSpell(button.SpellId);
-
-		if button.SpellId == 633 then -- Lay on Hands
-			button.IsAvailable = button.IsAvailable and not self.HasForbearance;
-			button.IsAtMaxPower = true;
-			button.IsAlmostAtMaxPower = false;
-		end
 	end;
 
 	local thisSingleTargetSpellIndex, nextSingleTargetSpellIndex, thisMultiTargetSpellIndex, nextMultiTargetSpellIndex;
@@ -803,7 +796,20 @@ OrlanStrike.Button:CloneTo(OrlanStrike.ConsecrationButton);
 function OrlanStrike.ConsecrationButton:UpdateStatus()
 	self.OrlanStrike.Button.UpdateState(self);
 
-	self.IsAtMaxPower = self.OrlanHeal.ManaPercent > 0.666;
+	self.IsAtMaxPower = self.OrlanStrike.ManaPercent > 0.666;
+end;
+
+
+OrlanStrike.LayOnHandsButton =
+{
+	SpellId = 633
+};
+OrlanStrike.Button:CloneTo(OrlanStrike.LayOnHandsButton);
+
+function OrlanStrike.LayOnHandsButton:UpdateStatus()
+	self.OrlanStrike.Button.UpdateState(self);
+
+	self.IsAvailable = self.IsAvailable and not self.OrlanStrike.HasForbearance;
 end;
 
 
