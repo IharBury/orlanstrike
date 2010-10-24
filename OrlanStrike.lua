@@ -936,7 +936,7 @@ OrlanStrike.ConsecrationButton = OrlanStrike.Button:CloneTo(
 	SpellId = 26573
 });
 
-function OrlanStrike.ConsecrationButton:UpdateStatus()
+function OrlanStrike.ConsecrationButton:UpdateState()
 	self.OrlanStrike.Button.UpdateState(self);
 
 	self.IsAtMaxPower = self.OrlanStrike.ManaPercent > 0.666;
