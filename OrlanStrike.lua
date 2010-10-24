@@ -627,11 +627,8 @@ function OrlanStrike:UpdateStatus()
 
 	for spellIndex = 1, self.SpellCount do
 		local button = self.CastWindow.Buttons[spellIndex];
-
-		button:SetAlpha(0.5);
-		self:SetBorderColor(button, 0, 0, 0, 0);
-
 		button:UpdateState();
+		button:UpdateDisplay();
 	end;
 
 	local thisSingleTargetSpellIndex, nextSingleTargetSpellIndex, thisMultiTargetSpellIndex, nextMultiTargetSpellIndex;
@@ -670,10 +667,6 @@ function OrlanStrike:UpdateStatus()
 
 		if not button.IsAvailable or not button.IsManaEnough then
 			button:SetAlpha(0.1);
-		elseif (button.SpellId == 31801) and button.IsAtMaxPower then -- Seal of Truth
-			self:SetBorderColor(button, 0.2, 0.2, 1, 1);
-		elseif (button.SpellId == 20154) and button.IsAtMaxPower then -- Seal of Righteousness
-			self:SetBorderColor(button, 0.2, 0.2, 1, 1);
 		elseif button.SpellId == 4987 then -- Cleanse
 			self:UpdateDispellButton(button);
 		end;
@@ -842,10 +835,25 @@ function OrlanStrike.Button:UpdateState()
 	self.IsAlmostAtMaxPower = false;
 end;
 
-function OrlanStrike.Button:UpdateBurstButtonState()
+function OrlanStrike.Button:UpdateDisplay()
+	self:SetAlpha(0.5);
+	self.OrlanStrike:SetBorderColor(self, 0, 0, 0, 0);
+
+	if not self.IsAvailable or not self.IsManaEnough then
+		self:SetAlpha(0.1);
+	end;
+end;
+
+function OrlanStrike.Button:UpdateBurstButtonDisplay()
 	if self.IsAvailable and self.IsManaEnough and self.IsAtMaxPower and (self.CooldownExpiration <= self.OrlanStrike.GcdExpiration) then
 		self:SetAlpha(1);
 		self.OrlanStrike:SetBorderColor(self, 1, 1, 1, 1);
+	end;
+end;
+
+function OrlanStrike.Button:UpdateSealButtonDisplay()
+	if self.IsAvailable and self.IsManaEnough and self.IsAtMaxPower then
+		self.OrlanStrike:SetBorderColor(self, 0.2, 0.2, 1, 1);
 	end;
 end;
 
@@ -896,8 +904,12 @@ function OrlanStrike.ZealotryButton:UpdateState()
 
 	self.IsAtMaxPower = self.IsAtMaxPower and not (self.OrlanStrike.HasZealotry or self.OrlanStrike.HasAvengingWrath);
 	self.IsAlmostAtMaxPower = self.IsAlmostAtMaxPower and not (self.OrlanStrike.HasZealotry or self.OrlanStrike.HasAvengingWrath);
+end;
 
-	self:UpdateBurstButtonState();
+function OrlanStrike.ZealotryButton:UpdateDisplay()
+	self.OrlanStrike.MaxHolyPowerButton.UpdateDisplay(self);
+
+	self:UpdateBurstButtonDisplay();
 end;
 
 
@@ -910,8 +922,12 @@ function OrlanStrike.AvengingWrathButton:UpdateState()
 	self.OrlanStrike.Button.UpdateState(self);
 
 	self.IsAtMaxPower = self.IsAtMaxPower and not (self.OrlanStrike.HasZealotry or self.OrlanStrike.HasAvengingWrath);
+end;
 
-	self:UpdateBurstButtonState();
+function OrlanStrike.AvengingWrathButton:UpdateDisplay()
+	self.OrlanStrike.Button.UpdateDisplay(self);
+
+	self:UpdateBurstButtonDisplay();
 end;
 
 
@@ -951,6 +967,12 @@ function OrlanStrike.SealOfTruthButton:UpdateState()
 	self.IsAtMaxPower = not self.OrlanStrike.HasSealOfTruth;
 end;
 
+function OrlanStrike.SealOfTruthButton:UpdateDisplay()
+	self.OrlanStrike.Button.UpdateDisplay(self);
+
+	self:UpdateSealButtonDisplay();
+end;
+
 
 OrlanStrike.SealOfRighteousnessButton = OrlanStrike.Button:CloneTo(
 {
@@ -963,16 +985,22 @@ function OrlanStrike.SealOfRighteousnessButton:UpdateState()
 	self.IsAtMaxPower = not self.OrlanStrike.HasSealOfRighteousness;
 end;
 
+function OrlanStrike.SealOfRighteousnessButton:UpdateDisplay()
+	self.OrlanStrike.Button.UpdateDisplay(self);
+
+	self:UpdateSealButtonDisplay();
+end;
+
 
 OrlanStrike.GuardianOfAncientKingsButton = OrlanStrike.Button:CloneTo(
 {
 	SpellId = 86150
 });
 
-function OrlanStrike.GuardianOfAncientKingsButton:UpdateState()
-	self.OrlanStrike.Button.UpdateState(self);
+function OrlanStrike.GuardianOfAncientKingsButton:UpdateDisplay()
+	self.OrlanStrike.Button.UpdateDisplay(self);
 
-	self:UpdateBurstButtonState();
+	self:UpdateBurstButtonDisplay();
 end;
 
 
