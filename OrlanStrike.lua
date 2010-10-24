@@ -228,12 +228,10 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.Button:CloneTo(
+			self.CleanseButton:CloneTo(
 			{
-				SpellId = 4987, -- Cleanse
 				Row = 3,
-				Column = 0,
-				Target = "player"
+				Column = 0
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -501,6 +499,23 @@ function OrlanStrike:DetectForbearance()
 	self.HasForbearance = UnitDebuff("player", forbearanceSpellName);
 end;
 
+function OrlanStrike:DetectDispellableDebuffs()
+	local debuffIndex = 1;
+	while true do
+		local debuffName, _, _, _, dispelType = UnitDebuff("player", debuffIndex);
+		if not debuffName then
+			self.HasDispellableDebuff = false;
+			break;
+		end;
+		if (dispelType == "Disease") or (dispelType == "Poison") then
+			self.HasDispellableDebuff = true;
+			break;
+		end;
+
+		debuffIndex = debuffIndex + 1;
+	end;
+end;
+
 function OrlanStrike:DetectAuras()
 	self:DetectZealotry();
 	self:DetectArtOfWar();
@@ -510,6 +525,7 @@ function OrlanStrike:DetectAuras()
 	self:DetectForbearance();
 	self:DetectSealOfTruth();
 	self:DetectSealOfRighteousness();
+	self:DetectDispellableDebuffs();
 end;
 
 function OrlanStrike:DetectHolyPower()
@@ -664,12 +680,6 @@ function OrlanStrike:UpdateStatus()
 		local button = self.CastWindow.Buttons[spellIndex];
 
 		self:UpdateButtonCooldown(button);
-
-		if not button.IsAvailable or not button.IsManaEnough then
-			button:SetAlpha(0.1);
-		elseif button.SpellId == 4987 then -- Cleanse
-			self:UpdateDispellButton(button);
-		end;
 	end;
 
 	local healingSpellIndex = 1;
@@ -689,23 +699,6 @@ function OrlanStrike:UpdateStatus()
 		end;
 
 		healingSpellIndex = healingSpellIndex + 1;
-	end;
-end;
-
-function OrlanStrike:UpdateDispellButton(button)
-	local debuffIndex = 1;
-	while true do
-		local debuffName, _, _, _, dispelType = UnitDebuff("player", debuffIndex);
-		if not debuffName then
-			break;
-		end;
-		if (dispelType == "Disease") or (dispelType == "Poison") then
-			self:SetBorderColor(button, 1, 0, 1, 1);
-			button:SetAlpha(1);
-			break;
-		end;
-
-		debuffIndex = debuffIndex + 1;
 	end;
 end;
 
@@ -1001,6 +994,29 @@ function OrlanStrike.GuardianOfAncientKingsButton:UpdateDisplay()
 	self.OrlanStrike.Button.UpdateDisplay(self);
 
 	self:UpdateBurstButtonDisplay();
+end;
+
+
+OrlanStrike.CleanseButton = OrlanStrike.Button:CloneTo(
+{
+	SpellId = 4987, -- Cleanse
+	Target = "player"
+});
+
+
+function OrlanStrike.CleanseButton:UpdateState()
+	self.OrlanStrike.Button.UpdateState(self);
+
+	self.IsAtMaxPower = self.OrlanStrike.HasDispellableDebuff;
+end;
+
+function OrlanStrike.CleanseButton:UpdateDisplay()
+	self.OrlanStrike.Button.UpdateDisplay(self);
+
+	if self.IsAvailable and self.IsManaEnough and self.IsAtMaxPower then
+		self.OrlanStrike:SetBorderColor(self, 1, 0, 1, 1);
+		self:SetAlpha(1);
+	end;
 end;
 
 
