@@ -113,26 +113,164 @@ function OrlanStrike:CreateCastWindow()
 
 	castWindow.Buttons =
 	{
-		self:CreateButton(castWindow, self.InquisitionButton, nil, 0, 0), -- Inquisition
-		self:CreateButton(castWindow, self.HolyPowerScaledButton, 85256, 0, 1), -- Templar's Verdict
-		self:CreateButton(castWindow, self.HolyPowerScaledButton, 53385, 0, 2), -- Divine Storm
-		self:CreateButton(castWindow, self.Button, 35395, 0, 3), -- Crusader Strike
-		self:CreateButton(castWindow, self.Button, 24275, 0, 4), -- Hammer of Wrath
-		self:CreateButton(castWindow, self.ExorcismButton, nil, 1, 0), -- Exorcism
-		self:CreateButton(castWindow, self.Button, 20271, 1, 1), -- Judgement
-		self:CreateButton(castWindow, self.Button, 2812, 1, 2), -- Holy Wrath
-		self:CreateButton(castWindow, self.ConsecrationButton, nil, 1, 3), -- Consecration
-		self:CreateButton(castWindow, self.ZealotryButton, nil, 1, 4), -- Zealotry
-		self:CreateButton(castWindow, self.Button, 31884, 2, 0), -- Avenging Wrath
-		self:CreateButton(castWindow, self.Button, 86150, 2, 1), -- Guardian of Ancient Kings
-		self:CreateButton(castWindow, self.Button, 54428, 2, 2), -- Divine Plea
-		self:CreateButton(castWindow, self.Button, 31801, 2, 3), -- Seal of Truth
-		self:CreateButton(castWindow, self.Button, 20154, 2, 4), -- Seal of Righteousness
-		self:CreateButton(castWindow, self.Button, 4987, 3, 0, true), -- Cleanse
-		self:CreateButton(castWindow, self.HolyPowerScaledButton, 85673, 3, 1, true), -- Word of Glory
-		self:CreateButton(castWindow, self.Button, 19750, 3, 2, true), -- Flash of Light
-		self:CreateButton(castWindow, self.LayOnHandsButton, nil, 3, 3, true), -- Lay on Hands
-		self:CreateButton(castWindow, self.Button, 642, 3, 4) -- Divine Shield
+		self:CreateButton(
+			castWindow, 
+			self.InquisitionButton:CloneTo(
+			{
+				Row = 0,
+				Column = 0
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.HolyPowerScaledButton:CloneTo(
+			{
+				SpellId = 85256, -- Templar's Verdict
+				Row = 0,
+				Column = 1
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.HolyPowerScaledButton:CloneTo(
+			{
+				SpellId = 53385, -- Divine Storm
+				Row = 0,
+				Column = 2
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 35395, -- Crusader Strike
+				Row = 0,
+				Column = 3
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 24275, -- Hammer of Wrath
+				Row = 0,
+				Column = 4
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.ExorcismButton:CloneTo(
+			{
+				Row = 1,
+				Column = 0
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 20271, -- Judgement
+				Row = 1,
+				Column = 1
+			})), -- Judgement
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 2812, -- Holy Wrath
+				Row = 1,
+				Column = 2
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.ConsecrationButton:CloneTo(
+			{
+				Row = 1,
+				Column = 3
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.ZealotryButton:CloneTo(
+			{
+				Row = 1,
+				Column = 4
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 31884, -- Avenging Wrath
+				Row = 2,
+				Column = 0
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 86150, -- Guardian of Ancient Kings
+				Row = 2,
+				Column = 1
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 54428, -- Divine Plea
+				Row = 2,
+				Column = 2
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 31801, -- Seal of Truth
+				Row = 2,
+				Column = 3
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 20154, -- Seal of Righteousness
+				Row = 2,
+				Column = 4
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 4987, -- Cleanse
+				Row = 3,
+				Column = 0,
+				Target = "player"
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.HolyPowerScaledButton:CloneTo(
+			{
+				SpellId = 85673, -- Word of Glory
+				Row = 3,
+				Column = 1,
+				Target = "player"
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 19750, -- Flash of Light
+				Row = 3,
+				Column = 2,
+				Target = "player"
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.LayOnHandsButton:CloneTo(
+			{
+				Row = 3,
+				Column = 3
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 642, -- Divine Shield
+				Row = 3,
+				Column = 4
+			}))
 	};
 	self.SpellCount = 20;
 
@@ -155,7 +293,7 @@ function OrlanStrike:CreateCastWindow()
 	return castWindow;
 end;
 
-function OrlanStrike:CreateButton(parent, prototype, spellId, rowIndex, columnIndex, isOnSelf)
+function OrlanStrike:CreateButton(parent, prototype)
 	local button = CreateFrame("Frame", nil, parent);
 
 	prototype:CloneTo(button);
@@ -163,13 +301,10 @@ function OrlanStrike:CreateButton(parent, prototype, spellId, rowIndex, columnIn
 
 	button:SetPoint(
 		"TOPLEFT", 
-		self.ButtonSpacing + (self.ButtonSize + self.ButtonSpacing) * columnIndex,
-		-(self.ButtonSpacing + (self.ButtonSize + self.ButtonSpacing) * rowIndex));
+		self.ButtonSpacing + (self.ButtonSize + self.ButtonSpacing) * button.Column,
+		-(self.ButtonSpacing + (self.ButtonSize + self.ButtonSpacing) * button.Row));
 	button:SetHeight(self.ButtonSize);
 	button:SetWidth(self.ButtonSize);
-	if spellId then
-		button.SpellId = spellId;
-	end;
 
 	button.Background = button:CreateTexture(nil, "BACKGROUND");
 	button.Background:SetAllPoints();
@@ -184,8 +319,8 @@ function OrlanStrike:CreateButton(parent, prototype, spellId, rowIndex, columnIn
 	button.Spell:RegisterForClicks("LeftButtonDown");
 	button.Spell:SetAttribute("type", "spell");
 	button.Spell:SetAttribute("spell", button.SpellId);
-	if isOnSelf then
-		button.Spell:SetAttribute("unit", "player");
+	if button.Target then
+		button.Spell:SetAttribute("unit", button.Target);
 	end;
 
 	self:CreateBorder(button, 2, 2);
@@ -701,6 +836,7 @@ function OrlanStrike:CloneTo(table)
 	for key, value in pairs(self) do
 		table[key] = value;
 	end;
+	return table;
 end;
 
 
@@ -720,8 +856,7 @@ function OrlanStrike.Button:UpdateState()
 end;
 
 
-OrlanStrike.HolyPowerScaledButton = {};
-OrlanStrike.Button:CloneTo(OrlanStrike.HolyPowerScaledButton);
+OrlanStrike.HolyPowerScaledButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.HolyPowerScaledButton:UpdateState()
 	self.OrlanStrike.Button.UpdateState(self);
@@ -732,11 +867,10 @@ function OrlanStrike.HolyPowerScaledButton:UpdateState()
 end;
 
 
-OrlanStrike.ExorcismButton = 
+OrlanStrike.ExorcismButton = OrlanStrike.Button:CloneTo(
 {
 	SpellId = 879
-};
-OrlanStrike.Button:CloneTo(OrlanStrike.ExorcismButton);
+});
 
 function OrlanStrike.ExorcismButton:UpdateState()
 	self.OrlanStrike.Button.UpdateState(self);
@@ -745,8 +879,7 @@ function OrlanStrike.ExorcismButton:UpdateState()
 end;
 
 
-OrlanStrike.MaxHolyPowerButton = {};
-OrlanStrike.Button:CloneTo(OrlanStrike.MaxHolyPowerButton);
+OrlanStrike.MaxHolyPowerButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.MaxHolyPowerButton:UpdateState()
 	self.OrlanStrike.Button.UpdateState(self);
@@ -759,11 +892,10 @@ function OrlanStrike.MaxHolyPowerButton:UpdateState()
 end;
 
 
-OrlanStrike.ZealotryButton =
+OrlanStrike.ZealotryButton = OrlanStrike.MaxHolyPowerButton:CloneTo(
 {
 	SpellId = 85696
-};
-OrlanStrike.MaxHolyPowerButton:CloneTo(OrlanStrike.ZealotryButton);
+});
 
 function OrlanStrike.ZealotryButton:UpdateState()
 	self.OrlanStrike.MaxHolyPowerButton.UpdateState(self);
@@ -773,11 +905,10 @@ function OrlanStrike.ZealotryButton:UpdateState()
 end;
 
 
-OrlanStrike.InquisitionButton =
+OrlanStrike.InquisitionButton = OrlanStrike.MaxHolyPowerButton:CloneTo(
 {
 	SpellId = 84963
-};
-OrlanStrike.MaxHolyPowerButton:CloneTo(OrlanStrike.InquisitionButton);
+});
 
 function OrlanStrike.InquisitionButton:UpdateState()
 	self.OrlanStrike.MaxHolyPowerButton.UpdateState(self);
@@ -787,11 +918,10 @@ function OrlanStrike.InquisitionButton:UpdateState()
 end;
 
 
-OrlanStrike.ConsecrationButton =
+OrlanStrike.ConsecrationButton = OrlanStrike.Button:CloneTo(
 {
 	SpellId = 26573
-};
-OrlanStrike.Button:CloneTo(OrlanStrike.ConsecrationButton);
+});
 
 function OrlanStrike.ConsecrationButton:UpdateStatus()
 	self.OrlanStrike.Button.UpdateState(self);
@@ -800,11 +930,11 @@ function OrlanStrike.ConsecrationButton:UpdateStatus()
 end;
 
 
-OrlanStrike.LayOnHandsButton =
+OrlanStrike.LayOnHandsButton = OrlanStrike.Button:CloneTo(
 {
-	SpellId = 633
-};
-OrlanStrike.Button:CloneTo(OrlanStrike.LayOnHandsButton);
+	SpellId = 633,
+	Target = "player"
+});
 
 function OrlanStrike.LayOnHandsButton:UpdateStatus()
 	self.OrlanStrike.Button.UpdateState(self);
