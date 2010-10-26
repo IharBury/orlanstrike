@@ -618,6 +618,9 @@ function OrlanStrike:UpdateThreatBar()
 		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth);
 		self.CastWindow.ThreatBar:SetTexture(1, 0, 0, 1);
 	elseif self.ThreatPercent > 100 then
+		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth);
+		self.CastWindow.ThreatBar:SetTexture(1, 1, 0, 1);
+	elseif self.RawThreatPercent > 100 then
 		self.CastWindow.ThreatBar:SetWidth(self.CastWindowWidth * self.ThreatPercent / 100);
 		self.CastWindow.ThreatBar:SetTexture(1, 1, 0, 1);
 	else
