@@ -651,7 +651,7 @@ function OrlanStrike:UpdateStatus()
 	end;
 
 	local thisSingleTargetSpellIndex, nextSingleTargetSpellIndex, thisMultiTargetSpellIndex, nextMultiTargetSpellIndex;
-	if (not self.Threat) or self.IsTanking or ((self.RawThreatPercent < 99) and (self.Threat * (1 - self.RawThreatPercent) / 100 < 30000 * 100)) then
+	if (not self.Threat) or self.IsTanking or ((self.RawThreatPercent < 95) and (self.Threat * (1 - self.RawThreatPercent) / 100 < 40000 * 100)) then
 		if self.HasZealotry then
 			thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.ZealotrySingleTargetPriorityIndexes);
 			thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.ZealotryMultiTargetPriorityIndexes);
