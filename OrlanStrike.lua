@@ -115,9 +115,8 @@ function OrlanStrike:CreateCastWindow()
 	{
 		self:CreateButton(
 			castWindow, 
-			self.MaxHolyPowerButton:CloneTo(
+			self.InquisitionButton:CloneTo(
 			{
-				SpellId = 84963, -- Inquisition
 				Row = 0,
 				Column = 0
 			})),
@@ -476,7 +475,13 @@ end;
 
 function OrlanStrike:DetectInquisition()
 	local inquisitionSpellName = GetSpellInfo(84963); -- Inquisition
-	self.HasInquisition = UnitBuff("player", inquisitionSpellName);
+	local hasInquisition, _, _, _, _, _, expires = UnitBuff("player", inquisitionSpellName);
+	self.HasInquisition = hasInquisition;
+	if self.HasInquisition then
+		self.InquisitionDurationLeft = expires - self.Now;
+	else
+		self.InquisitionDurationLeft = 0;
+	end;
 end;
 
 function OrlanStrike:DetectAvengingWrath()
@@ -531,7 +536,7 @@ end;
 function OrlanStrike:DetectHolyPower()
 	self.HolyPowerAmount = UnitPower("player", SPELL_POWER_HOLY_POWER);
 	if self.HolyPowerOverride and 
-			(self.HolyPowerOverrideTimeout > GetTime()) and
+			(self.HolyPowerOverrideTimeout > self.Now) and
 			(self.HolyPowerOverride > self.HolyPowerAmount) then
 		self.HolyPowerAmount = self.HolyPowerOVerride;
 	end;
@@ -630,13 +635,13 @@ function OrlanStrike:UpdateThreatBar()
 end;
 
 function OrlanStrike:UpdateStatus()
+	self:DetectNow();
 	self:DetectAuras();
 	self:DetectHolyPower();
 	self:DetectHealthPercent();
 	self:DetectManaPercent();
 	self:DetectThreat();
 
-	self:DetectNow();
 	self:DetectGcd();
 
 	self:UpdateHolyPowerBar();
@@ -767,7 +772,7 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 		if (UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA) < 0.9) and
 				divinePleaButton.IsAvailable and
 				(divinePleaButton.CooldownExpiration <= minCooldownExpiration) and
-				(isManaLow or (minCooldownExpiration >= GetTime() + 1.5 + self.MaxAbilityWaitTime)) then
+				(isManaLow or (minCooldownExpiration >= self.Now + 1.5 + self.MaxAbilityWaitTime)) then
 			nextSpellIndex = firstSpellIndex;
 			firstSpellIndex = self.DivinePleaSpellIndex;
 		end;
@@ -887,6 +892,19 @@ function OrlanStrike.MaxHolyPowerButton:UpdateState()
 	self.IsAlmostAtMaxPower = self.IsLearned and 
 		(not self.IsAtMaxPower) and
 		(self.HasZealotry or (self.HolyPowerAmount == 2));
+end;
+
+
+OrlanStrike.InquisitionButton = OrlanStrike.MaxHolyPowerButton:CloneTo(
+{
+	SpellId = 84963
+});
+
+function OrlanStrike.InquisitionButton:UpdateState()
+	self.OrlanStrike.MaxHolyPowerButton.UpdateState(self);
+
+	self.IsAtMaxPower = self.IsAtMaxPower and (self.OrlanStrike.InquisitionDurationLeft < 8);
+	self.IsAlmostAtMaxPower = self.IsAlmostAtMaxPower and (self.OrlanStrike.InquisitionDurationLeft < 8);
 end;
 
 
