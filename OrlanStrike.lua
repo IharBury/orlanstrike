@@ -13,6 +13,8 @@ end;
 function OrlanStrike:Initialize(configName)
 	local orlanStrike = self;
 
+	local _, build = GetBuildInfo();
+	self.IsUsingNewDivineStormModel = tonumber(build) >= 13241;
 	self.ConfigName = configName;
 	self.EventFrame = CreateFrame("Frame");
 	self.ButtonSize = 32;
@@ -61,8 +63,8 @@ function OrlanStrike:Initialize(configName)
 		24275, -- Hammer of Wrath
 		879, -- Exorcism
 		20271, -- Judgement
-		2812, -- Holy Wrath
-		26573 -- Consecration
+		26573, -- Consecration
+		2812 -- Holy Wrath
 	};
 	self.ZealotrySingleTargetPriorities =
 	{
@@ -84,6 +86,31 @@ function OrlanStrike:Initialize(configName)
 		633, -- Lay on Hands
 		642 -- Divine Shield
 	};
+
+	if self.IsUsingNewDivineStormModel then
+		self.MultiTargetPriorities =
+		{
+			84963, -- Inquisition
+			85256, -- Templar's Verdict
+			53385, -- Divine Storm
+			24275, -- Hammer of Wrath
+			879, -- Exorcism
+			20271, -- Judgement
+			26573, -- Consecration
+			2812 -- Holy Wrath
+		};
+		self.ZealotryMultiTargetPriorities =
+		{
+			84963, -- Inquisition
+			85256, -- Templar's Verdict
+			53385, -- Divine Storm
+			24275, -- Hammer of Wrath
+			879, -- Exorcism
+			20271, -- Judgement
+			26573, -- Consecration
+			2812 -- Holy Wrath
+		};
+	end;
 end;
 
 function OrlanStrike:CreateCastWindow()
@@ -130,9 +157,8 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.HolyPowerScaledButton:CloneTo(
+			self.DivineStormButton:CloneTo(
 			{
-				SpellId = 53385, -- Divine Storm
 				Row = 0,
 				Column = 2
 			})),
@@ -169,16 +195,16 @@ function OrlanStrike:CreateCastWindow()
 			})), -- Judgement
 		self:CreateButton(
 			castWindow, 
-			self.Button:CloneTo(
+			self.ConsecrationButton:CloneTo(
 			{
-				SpellId = 2812, -- Holy Wrath
 				Row = 1,
 				Column = 2
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.ConsecrationButton:CloneTo(
+			self.Button:CloneTo(
 			{
+				SpellId = 2812, -- Holy Wrath
 				Row = 1,
 				Column = 3
 			})),
@@ -867,6 +893,22 @@ function OrlanStrike.HolyPowerScaledButton:UpdateState()
 	self.IsAtMaxPower = (self.OrlanStrike.HolyPowerAmount == 3) or self.OrlanStrike.HasHandOfLight;
 	self.IsAlmostAtMaxPower = not self.IsAtMaxPower and (self.OrlanStrike.HasZealotry or (self.OrlanStrike.HolyPowerAmount == 2));
 	self.IsAvailable = self.IsLearned and ((self.OrlanStrike.HolyPowerAmount > 0) or self.OrlanStrike.HasZealotry);
+end;
+
+
+OrlanStrike.DivineStormButton = OrlanStrike.HolyPowerScaledButton:CloneTo(
+{
+	SpellId = 53385
+});
+
+function OrlanStrike.DivineStormButton:UpdateState()
+	self.OrlanStrike.HolyPowerScaledButton.UpdateState(self);
+
+	if (self.OrlanStrike.IsUsingNewDivineStormModel) then
+		self.IsAtMaxPower = true;
+		self.IsAlmostAtMaxPower = false;
+		self.IsAvailable = self.IsLearned;
+	end;
 end;
 
 
