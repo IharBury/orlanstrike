@@ -7,7 +7,19 @@ function SlashCmdList.ORLANSTRIKE(message, editbox)
 		OrlanStrike:Show();
 	elseif message == "hide" then
 		OrlanStrike:Hide();
+	elseif string.sub(message, 1, 6) == "scale " then
+		local scale = tonumber(string.sub(message, 7, string.len(message)));
+		if scale and (scale > 0) and (scale < 100) then
+			OrlanStrike:SetScale(scale);
+		else
+			print("OrlanStrike: Incorrect scale.");
+		end;
 	end;
+end;
+
+function OrlanStrike:SetScale(scale)
+	self.Config.Scale = scale;
+	self.CastWindow:SetScale(scale);
 end;
 
 function OrlanStrike:Initialize(configName)
@@ -116,6 +128,7 @@ end;
 function OrlanStrike:CreateCastWindow()
 	local orlanStrike = self;
 	local castWindow = CreateFrame("Frame", self.CastWindowName, UIParent);
+	castWindow:SetScale(self.Config.Scale);
 
 	function castWindow:HandleDragStop()
 		self:StopMovingOrSizing();
@@ -390,6 +403,7 @@ end;
 function OrlanStrike:HandleLoaded()
 	_G[self.ConfigName] = _G[self.ConfigName] or {};
 	self.Config = _G[self.ConfigName];
+	self.Config.Scale = self.Config.Scale or 1;
 
 	self.CastWindow = self:CreateCastWindow();
 	self.SingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.SingleTargetPriorities);
