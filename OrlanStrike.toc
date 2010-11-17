@@ -1,6 +1,6 @@
 ## Interface: 40000
 ## Title: OrlanStrike
-## Version: 1.2.3
+## Version: 1.2.4
 ## Notes: 
 ## SavedVariablesPerCharacter: OrlanStrikeConfig
 OrlanStrike.lua
