@@ -26,7 +26,7 @@ function OrlanStrike:Initialize(configName)
 	local orlanStrike = self;
 
 	local _, build = GetBuildInfo();
-	self.IsUsingNewDivineStormModel = tonumber(build) >= 13241;
+	self.IsUsingNewDivineStormModel = tonumber(build) == 13277;
 	self.ConfigName = configName;
 	self.EventFrame = CreateFrame("Frame");
 	self.ButtonSize = 32;
