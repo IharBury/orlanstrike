@@ -26,7 +26,6 @@ function OrlanStrike:Initialize(configName)
 	local orlanStrike = self;
 
 	local _, build = GetBuildInfo();
-	self.IsUsingNewDivineStormModel = (tonumber(build) == 13277) or (tonumber(build) >= 13316);
 	self.ConfigName = configName;
 	self.EventFrame = CreateFrame("Frame");
 	self.ButtonSize = 32;
@@ -70,8 +69,8 @@ function OrlanStrike:Initialize(configName)
 	self.MultiTargetPriorities =
 	{
 		84963, -- Inquisition
+		85256, -- Templar's Verdict
 		53385, -- Divine Storm
-		35395, -- Crusader Strike
 		24275, -- Hammer of Wrath
 		879, -- Exorcism
 		20271, -- Judgement
@@ -84,12 +83,6 @@ function OrlanStrike:Initialize(configName)
 		85256, -- Templar's Verdict
 		35395 -- Crusader Strike
 	};
-	self.ZealotryMultiTargetPriorities =
-	{
-		84963, -- Inquisition
-		53385, -- Divine Storm
-		35395 -- Crusader Strike
-	};
 	self.MaxAbilityWaitTime = 0.1;
 	self.HealingSpellPriorities =
 	{
@@ -98,31 +91,6 @@ function OrlanStrike:Initialize(configName)
 		633, -- Lay on Hands
 		642 -- Divine Shield
 	};
-
-	if self.IsUsingNewDivineStormModel then
-		self.MultiTargetPriorities =
-		{
-			84963, -- Inquisition
-			85256, -- Templar's Verdict
-			53385, -- Divine Storm
-			24275, -- Hammer of Wrath
-			879, -- Exorcism
-			20271, -- Judgement
-			26573, -- Consecration
-			2812 -- Holy Wrath
-		};
-		self.ZealotryMultiTargetPriorities =
-		{
-			84963, -- Inquisition
-			85256, -- Templar's Verdict
-			53385, -- Divine Storm
-			24275, -- Hammer of Wrath
-			879, -- Exorcism
-			20271, -- Judgement
-			26573, -- Consecration
-			2812 -- Holy Wrath
-		};
-	end;
 end;
 
 function OrlanStrike:CreateCastWindow()
@@ -409,7 +377,6 @@ function OrlanStrike:HandleLoaded()
 	self.SingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.SingleTargetPriorities);
 	self.MultiTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.MultiTargetPriorities);
 	self.ZealotrySingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.ZealotrySingleTargetPriorities);
-	self.ZealotryMultiTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.ZealotryMultiTargetPriorities);
 	self.HealingSpellPriorityIndexes = self:CalculateSpellPriorityIndexes(self.HealingSpellPriorities);
 	self.DivinePleaSpellIndex = self:CalculateSpellIndex(54428); -- Divine Plea
 
@@ -699,11 +666,10 @@ function OrlanStrike:UpdateStatus()
 	if (not self.Threat) or self.IsTanking or ((self.RawThreatPercent < 95) and (self.Threat * (1 - self.RawThreatPercent) / 100 < 40000 * 100)) then
 		if self.HasZealotry then
 			thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.ZealotrySingleTargetPriorityIndexes);
-			thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.ZealotryMultiTargetPriorityIndexes);
 		else
 			thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.SingleTargetPriorityIndexes);
-			thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.MultiTargetPriorityIndexes);
 		end;
+		thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.MultiTargetPriorityIndexes);
 	end;
 
 	if nextSingleTargetSpellIndex then
@@ -910,20 +876,10 @@ function OrlanStrike.HolyPowerScaledButton:UpdateState()
 end;
 
 
-OrlanStrike.DivineStormButton = OrlanStrike.HolyPowerScaledButton:CloneTo(
+OrlanStrike.DivineStormButton = OrlanStrike.Button:CloneTo(
 {
 	SpellId = 53385
 });
-
-function OrlanStrike.DivineStormButton:UpdateState()
-	self.OrlanStrike.HolyPowerScaledButton.UpdateState(self);
-
-	if (self.OrlanStrike.IsUsingNewDivineStormModel) then
-		self.IsAtMaxPower = true;
-		self.IsAlmostAtMaxPower = false;
-		self.IsAvailable = self.IsLearned;
-	end;
-end;
 
 
 OrlanStrike.ExorcismButton = OrlanStrike.Button:CloneTo(
