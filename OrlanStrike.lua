@@ -872,7 +872,7 @@ function OrlanStrike.HolyPowerScaledButton:UpdateState()
 
 	self.IsAtMaxPower = (self.OrlanStrike.HolyPowerAmount == 3) or self.OrlanStrike.HasHandOfLight;
 	self.IsAlmostAtMaxPower = not self.IsAtMaxPower and (self.OrlanStrike.HasZealotry or (self.OrlanStrike.HolyPowerAmount == 2));
-	self.IsAvailable = self.IsLearned and ((self.OrlanStrike.HolyPowerAmount > 0) or self.OrlanStrike.HasZealotry);
+	self.IsAvailable = self.IsLearned and ((self.OrlanStrike.HolyPowerAmount > 0) or self.OrlanStrike.HasZealotry or self.OrlanStrike.HasHandOfLight);
 end;
 
 
