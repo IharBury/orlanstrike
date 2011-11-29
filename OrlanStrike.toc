@@ -1,6 +1,6 @@
-## Interface: 40200
+## Interface: 40300
 ## Title: OrlanStrike
-## Version: 1.2.7
+## Version: 1.2.8
 ## Notes: 
 ## SavedVariablesPerCharacter: OrlanStrikeConfig
 OrlanStrike.lua
