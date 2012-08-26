@@ -348,6 +348,13 @@ function OrlanStrike:CreateCastWindow()
 				SpellId = 1022, -- Hand of Protection
 				Row = 4,
 				Column = 4
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.RebukeButton:CloneTo(
+			{
+				Row = 1,
+				Column = 4
 			}))
 	};
 	if IsSpellKnown(114165) then -- Holy Prism
@@ -1144,6 +1151,27 @@ end;
 
 function OrlanStrike.WordOfGloryButton:IsVeryReasonable(holyPower, time)
 	return (self.OrlanStrike.HealthPercent <= 0.2) and self:IsReasonable(holyPower, time);
+end;
+
+OrlanStrike.RebukeButton = OrlanStrike.Button:CloneTo(
+{
+	SpellId = 96231 -- Rebuke
+});
+
+function OrlanStrike.RebukeButton:IsReasonable(holyPower, time)
+	local spell, _, _, _, _, _, _, _, nonInterruptible = UnitCastingInfo("target");
+	return self.OrlanStrike.Button.IsReasonable(self, holyPower, time) and spell and not nonInterruptible;
+end;
+
+function OrlanStrike.RebukeButton:UpdateDisplay()
+	self.OrlanStrike.Button.UpdateDisplay(self);
+
+	if self.IsAvailable and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
+		self.OrlanStrike:SetBorderColor(self, 0.6, 0.3, 0, 1);
+		self:SetAlpha(1);
+	else
+		self:SetAlpha(0.1);
+	end;
 end;
 
 OrlanStrike:Initialize("OrlanStrikeConfig");
