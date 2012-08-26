@@ -90,9 +90,6 @@ function OrlanStrike:Initialize(configName)
 		},
 		{
 			SpellId = 20271 -- Judgement
-		},
-		{
-			SpellId = 85256 -- Templar's Verdict
 		}
 	};
 	self.MultiTargetPriorities =
@@ -115,9 +112,6 @@ function OrlanStrike:Initialize(configName)
 		},
 		{
 			SpellId = 20271 -- Judgement
-		},
-		{
-			SpellId = 53385 -- Divine Storm
 		}
 	};
 	self.MaxAbilityWaitTime = 0.1;
@@ -262,16 +256,14 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.HolyPowerButton:CloneTo(
+			self.WordOfGloryButton:CloneTo(
 			{
-				SpellId = 85673, -- Word of Glory
 				Row = 3,
-				Column = 1,
-				Target = "player"
+				Column = 1
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.Button:CloneTo(
+			self.HealthButton:CloneTo(
 			{
 				SpellId = 19750, -- Flash of Light
 				Row = 3,
@@ -287,7 +279,7 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.Button:CloneTo(
+			self.HealthButton:CloneTo(
 			{
 				SpellId = 642, -- Divine Shield
 				Row = 3,
@@ -749,7 +741,7 @@ function OrlanStrike:UpdateStatus()
 	end;
 
 	local thisSingleTargetSpellIndex, nextSingleTargetSpellIndex, thisMultiTargetSpellIndex, nextMultiTargetSpellIndex;
-	if (not self.Threat) or self.IsTanking or ((self.RawThreatPercent < 95) and (self.Threat * (1 - self.RawThreatPercent) / 100 < 40000 * 100)) then
+	if (not self.Threat) or self.IsTanking or ((self.RawThreatPercent < 95) and (self.Threat * (1 - self.RawThreatPercent) / 100 < 150000 * 100)) then
 		thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.SingleTargetPriorityIndexes);
 		thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.MultiTargetPriorityIndexes);
 	end;
@@ -787,7 +779,7 @@ function OrlanStrike:UpdateStatus()
 	local healingSpellIndex = 1;
 	while self.HealingSpellPriorityIndexes[healingSpellIndex] do
 		local priorityIndex = self.HealingSpellPriorityIndexes[healingSpellIndex];
-		if self:IsPrioritySpell(priorityIndex, holyPower, time()) then
+		if self:IsPrioritySpell(priorityIndex, holyPower, GetTime()) then
 			local button = self.CastWindow.Buttons[priorityIndex.Index];
 			self:SetBorderColor(button, 1, 0.5, 0.5, 1);
 			button:SetAlpha(1);
@@ -937,22 +929,15 @@ OrlanStrike.Button =
 
 function OrlanStrike.Button:UpdateState()
 	self.IsLearned = FindSpellBookSlotBySpellID(self.SpellId);
-	local isUsable, noMana = IsUsableSpell(self.SpellId);
-	self.IsAvailable = self.IsLearned and (isUsable or noMana);
-	self.IsManaEnough = self.IsLearned and isUsable;
+	self.IsAvailable = self.IsLearned and IsUsableSpell(self.SpellId);
 	self.CooldownExpiration = self.OrlanStrike:GetCooldownExpiration(self.SpellId);
 end;
 
 function OrlanStrike.Button:IsUsable(holyPower, time)
-	return self.IsAvailable and self.IsManaEnough and (self.CooldownExpiration <= time);
+	return self.IsAvailable and (self.CooldownExpiration <= time);
 end;
 
 function OrlanStrike.Button:IsReasonable(holyPower, time)
-	--local time = time() + timeDelta;
-	--if time < self.OrlanStrike.GcdExpiration then
-	--	time = self.OrlanStrike.GcdExpiration;
-	--end;
-
 	return self:IsUsable(holyPower, time);
 end;
 
@@ -964,7 +949,7 @@ function OrlanStrike.Button:UpdateDisplay(holyPower)
 	self:SetAlpha(0.5);
 	self.OrlanStrike:SetBorderColor(self, 0, 0, 0, 0);
 
-	if not self.IsAvailable or not self.IsManaEnough then
+	if not self.IsAvailable then
 		self:SetAlpha(0.1);
 	end;
 end;
@@ -974,7 +959,7 @@ OrlanStrike.BurstButton = OrlanStrike.Button:CloneTo({});
 function OrlanStrike.BurstButton:UpdateDisplay(holyPower)
 	self.OrlanStrike.Button.UpdateDisplay(self, holyPower);
 
-	if self.IsAvailable and self.IsManaEnough and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
+	if self.IsAvailable and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
 		self:SetAlpha(1);
 		self.OrlanStrike:SetBorderColor(self, 1, 1, 1, 1);
 	end;
@@ -985,7 +970,7 @@ OrlanStrike.SealButton = OrlanStrike.Button:CloneTo({});
 function OrlanStrike.SealButton:UpdateDisplay(holyPower)
 	self.OrlanStrike.Button.UpdateDisplay(self, holyPower);
 
-	if self.IsAvailable and self.IsManaEnough and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
+	if self.IsAvailable and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
 		self.OrlanStrike:SetBorderColor(self, 0.2, 0.2, 1, 1);
 	else
 		self:SetAlpha(0.1);
@@ -1002,6 +987,12 @@ function OrlanStrike.HolyPowerButton:IsVeryReasonable(holyPower, time)
 	return (holyPower == 5) and self:IsReasonable(holyPower, time);
 end;
 
+function OrlanStrike.HolyPowerButton:UpdateState()
+	self.OrlanStrike.Button.UpdateState(self);
+
+	self.IsAvailable = self.IsLearned;
+end;
+
 OrlanStrike.MaxHolyPowerButton = OrlanStrike.HolyPowerButton:CloneTo({});
 
 function OrlanStrike.MaxHolyPowerButton:IsUsable(holyPower, time)
@@ -1013,17 +1004,24 @@ OrlanStrike.InquisitionButton = OrlanStrike.HolyPowerButton:CloneTo(
 	SpellId = 84963
 });
 
-function OrlanStrike.MaxHolyPowerButton:IsReasonable(holyPower, time)
+function OrlanStrike.InquisitionButton:IsReasonable(holyPower, time)
 	return self.OrlanStrike.HolyPowerButton.IsReasonable(self, holyPower, time) and
-		(self.OrlanStrike.InquisitionDurationLeft + time() - time <= 2);
+		(self.OrlanStrike.InquisitionDurationLeft + GetTime() - time <= 3);
 end;
 
-function OrlanStrike.MaxHolyPowerButton:IsVeryReasonable(holyPower, time)
+function OrlanStrike.InquisitionButton:IsVeryReasonable(holyPower, time)
 	return self:IsReasonable(holyPower, time) and
-		(self.OrlanStrike.InquisitionDurationLeft + time() - time <= 0);
+		(self.OrlanStrike.InquisitionDurationLeft + GetTime() - time <= 0);
 end;
 
-OrlanStrike.LayOnHandsButton = OrlanStrike.Button:CloneTo(
+OrlanStrike.HealthButton = OrlanStrike.Button:CloneTo({});
+
+function OrlanStrike.HealthButton:IsReasonable(holyPower, time)
+	return (self.OrlanStrike.HealthPercent <= 0.2) and 
+		self.OrlanStrike.Button.IsReasonable(self, holyPower, time);
+end;
+
+OrlanStrike.LayOnHandsButton = OrlanStrike.HealthButton:CloneTo(
 {
 	SpellId = 633,
 	Target = "player"
@@ -1066,10 +1064,25 @@ end;
 function OrlanStrike.CleanseButton:UpdateDisplay()
 	self.OrlanStrike.Button.UpdateDisplay(self);
 
-	if self.IsAvailable and self.IsManaEnough and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
+	if self.IsAvailable and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
 		self.OrlanStrike:SetBorderColor(self, 1, 0, 1, 1);
 		self:SetAlpha(1);
 	end;
+end;
+
+OrlanStrike.WordOfGloryButton = OrlanStrike.HolyPowerButton:CloneTo(
+{
+	SpellId = 85673, -- Word of Glory
+	Target = "player"
+});
+
+function OrlanStrike.WordOfGloryButton:IsReasonable(holyPower, time)
+	return (self.OrlanStrike.HealthPercent <= 0.4) and
+		self.OrlanStrike.HolyPowerButton.IsReasonable(self, holyPower, time);
+end;
+
+function OrlanStrike.WordOfGloryButton:IsVeryReasonable(holyPower, time)
+	return (self.OrlanStrike.HealthPercent <= 0.2) and self:IsReasonable(holyPower, time);
 end;
 
 OrlanStrike:Initialize("OrlanStrikeConfig");
