@@ -1035,7 +1035,7 @@ end;
 
 OrlanStrike.GuardianOfAncientKingsButton = OrlanStrike.Button:CloneTo(
 {
-	SpellId = 86150
+	SpellId = 86698
 });
 
 function OrlanStrike.GuardianOfAncientKingsButton:UpdateDisplay()
