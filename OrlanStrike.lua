@@ -76,6 +76,10 @@ function OrlanStrike:Initialize(configName)
 			SpellId = 84963 -- Inquisition
 		},
 		{
+			SpellId = 20271, -- Judgement
+			VeryReasonable = true
+		},
+		{
 			SpellId = 85256, -- Templar's Verdict
 			VeryReasonable = true
 		},
@@ -96,6 +100,10 @@ function OrlanStrike:Initialize(configName)
 	{
 		{ 
 			SpellId = 84963 -- Inquisition
+		},
+		{
+			SpellId = 20271, -- Judgement
+			VeryReasonable = true
 		},
 		{
 			SpellId = 53385, -- Divine Storm
@@ -193,9 +201,8 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.Button:CloneTo(
+			self.JudgementButton:CloneTo(
 			{
-				SpellId = 20271, -- Judgement
 				Row = 0,
 				Column = 4
 			})),
@@ -952,6 +959,17 @@ function OrlanStrike.Button:UpdateDisplay(holyPower)
 	if not self.IsAvailable then
 		self:SetAlpha(0.1);
 	end;
+end;
+
+OrlanStrike.JudgementButton = OrlanStrike.Button:CloneTo(
+{
+	SpellId = 20271 -- Judgement
+});
+
+function OrlanStrike.JudgementButton:IsVeryReasonable(holyPower, time)
+	return UnitCanAttack("player", "target") and 
+		not UnitAura("target", GetSpellInfo(81326)) and -- Physical Vulnerability
+		not UnitAura("target", GetSpellInfo(114729)); -- Damage Taken % Debuff
 end;
 
 OrlanStrike.BurstButton = OrlanStrike.Button:CloneTo({});
