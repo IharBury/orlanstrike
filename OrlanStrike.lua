@@ -136,6 +136,9 @@ function OrlanStrike:Initialize(configName)
 		},
 		{
 			SpellId = 642 -- Divine Shield
+		},
+		{
+			SpellId = 20925 -- Sacred Shield
 		}
 	};
 end;
@@ -296,13 +299,53 @@ function OrlanStrike:CreateCastWindow()
 			castWindow, 
 			self.SealOfTruthButton:CloneTo(
 			{
-				Row = 4,
+				Row = 2,
 				Column = 3
 			})),
 		self:CreateButton(
 			castWindow, 
 			self.SealOfRighteousnessButton:CloneTo(
 			{
+				Row = 2,
+				Column = 4
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 114039, -- Hand of Purity
+				Row = 4,
+				Column = 0
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.HealthButton:CloneTo(
+			{
+				SpellId = 20925, -- Sacred Shield
+				Row = 4,
+				Column = 1
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 498, -- Divine Protection
+				Row = 4,
+				Column = 2
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 31821, -- Devotion Aura
+				Row = 4,
+				Column = 3
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 1022, -- Hand of Protection
 				Row = 4,
 				Column = 4
 			}))
