@@ -59,29 +59,19 @@ function OrlanStrike:Initialize(configName)
 	{
 		84963, -- Inquisition
 		85256, -- Templar's Verdict
-		35395, -- Crusader Strike
-		24275, -- Hammer of Wrath
 		879, -- Exorcism
-		20271, -- Judgement
-		2812, -- Holy Wrath
-		26573 -- Consecration
+		24275, -- Hammer of Wrath
+		35395, -- Crusader Strike
+		20271 -- Judgement
 	};
 	self.MultiTargetPriorities =
 	{
 		84963, -- Inquisition
-		85256, -- Templar's Verdict
 		53385, -- Divine Storm
-		24275, -- Hammer of Wrath
 		879, -- Exorcism
-		20271, -- Judgement
-		26573, -- Consecration
-		2812 -- Holy Wrath
-	};
-	self.HolyAvengerSingleTargetPriorities =
-	{
-		84963, -- Inquisition
-		85256, -- Templar's Verdict
-		35395 -- Crusader Strike
+		24275, -- Hammer of Wrath
+		53595, -- Hammer of the Righteous
+		20271 -- Judgement
 	};
 	self.MaxAbilityWaitTime = 0.1;
 	self.HealingSpellPriorities =
@@ -173,21 +163,6 @@ function OrlanStrike:CreateCastWindow()
 				SpellId = 20271, -- Judgement
 				Row = 1,
 				Column = 1
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.ConsecrationButton:CloneTo(
-			{
-				Row = 1,
-				Column = 2
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.Button:CloneTo(
-			{
-				SpellId = 2812, -- Holy Wrath
-				Row = 1,
-				Column = 3
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -380,7 +355,6 @@ function OrlanStrike:HandleLoaded()
 	self.CastWindow = self:CreateCastWindow();
 	self.SingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.SingleTargetPriorities);
 	self.MultiTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.MultiTargetPriorities);
-	self.HolyAvengerSingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.HolyAvengerSingleTargetPriorities);
 	self.HealingSpellPriorityIndexes = self:CalculateSpellPriorityIndexes(self.HealingSpellPriorities);
 	self.DivinePleaSpellIndex = self:CalculateSpellIndex(54428); -- Divine Plea
 
@@ -435,7 +409,7 @@ end;
 function OrlanStrike:CalculateSpellIndex(spellId)
 	local result;
 	for index = 1, self.SpellCount do
-		if self.CastWindow.Buttons[index].SpellId == spellId then
+		if self.CastWindow.Buttons[index] and (self.CastWindow.Buttons[index].SpellId == spellId) then
 			result = index;
 			break;
 		end;
@@ -501,13 +475,11 @@ function OrlanStrike:DetectAvengingWrath()
 end;
 
 function OrlanStrike:DetectSealOfTruth()
-	local sealOfTruthSpellName = GetSpellInfo(31801); -- Seal of Truth
-	self.HasSealOfTruth = UnitBuff("player", sealOfTruthSpellName);
+	self.HasSealOfTruth = GetShapeshiftForm() == 1;
 end;
 
 function OrlanStrike:DetectSealOfRighteousness()
-	local sealOfRighteousnessSpellName = GetSpellInfo(20154); -- Seal of Righteousness
-	self.HasSealOfRighteousness = UnitBuff("player", sealOfRighteousnessSpellName);
+	self.HasSealOfRighteousness = GetShapeshiftForm() == 2;
 end;
 
 function OrlanStrike:DetectForbearance()
@@ -673,17 +645,15 @@ function OrlanStrike:UpdateStatus()
 
 	for spellIndex = 1, self.SpellCount do
 		local button = self.CastWindow.Buttons[spellIndex];
-		button:UpdateState();
-		button:UpdateDisplay();
+		if button then
+			button:UpdateState();
+			button:UpdateDisplay();
+		end;
 	end;
 
 	local thisSingleTargetSpellIndex, nextSingleTargetSpellIndex, thisMultiTargetSpellIndex, nextMultiTargetSpellIndex;
 	if (not self.Threat) or self.IsTanking or ((self.RawThreatPercent < 95) and (self.Threat * (1 - self.RawThreatPercent) / 100 < 40000 * 100)) then
-		if self.HasHolyAvenger then
-			thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.HolyAvengerSingleTargetPriorityIndexes);
-		else
-			thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.SingleTargetPriorityIndexes);
-		end;
+		thisSingleTargetSpellIndex, nextSingleTargetSpellIndex = self:GetSpellsToCast(self.SingleTargetPriorityIndexes);
 		thisMultiTargetSpellIndex, nextMultiTargetSpellIndex = self:GetSpellsToCast(self.MultiTargetPriorityIndexes);
 	end;
 
@@ -707,8 +677,9 @@ function OrlanStrike:UpdateStatus()
 
 	for spellIndex = 1, self.SpellCount do
 		local button = self.CastWindow.Buttons[spellIndex];
-
-		self:UpdateButtonCooldown(button);
+		if button then
+			self:UpdateButtonCooldown(button);
+		end;
 	end;
 
 	local healingSpellIndex = 1;
@@ -759,10 +730,12 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 	if firstSpellIndex then
 		for spellIndex = 1, self.SpellCount do
 			local button = self.CastWindow.Buttons[spellIndex];
-			if button.CooldownExpiration < minCooldownExpiration + 1.5 then
-				nextSpellCooldownExpirations[spellIndex] = minCooldownExpiration + 1.5;
-			else
-				nextSpellCooldownExpirations[spellIndex] = button.CooldownExpiration;
+			if button then
+				if button.CooldownExpiration < minCooldownExpiration + 1.5 then
+					nextSpellCooldownExpirations[spellIndex] = minCooldownExpiration + 1.5;
+				else
+					nextSpellCooldownExpirations[spellIndex] = button.CooldownExpiration;
+				end;
 			end;
 		end;
 		nextSpellCooldownExpirations[firstSpellIndex] = minCooldownExpiration + 1000;
@@ -877,6 +850,9 @@ function OrlanStrike.Button:UpdateSealButtonDisplay()
 	if self.IsAvailable and self.IsManaEnough and self.IsAtMaxPower then
 		self.OrlanStrike:SetBorderColor(self, 0.2, 0.2, 1, 1);
 	end;
+	if not self.IsAtMaxPower then
+		self:SetAlpha(0.1);
+	end;
 end;
 
 
@@ -889,12 +865,6 @@ function OrlanStrike.HolyPowerScaledButton:UpdateState()
 	self.IsAlmostAtMaxPower = not self.IsAtMaxPower and (self.OrlanStrike.HasHolyAvenger or (self.OrlanStrike.HolyPowerAmount == 2));
 	self.IsAvailable = self.IsLearned and ((self.OrlanStrike.HolyPowerAmount > 0) or self.OrlanStrike.HasHolyAvenger or self.OrlanStrike.HasHandOfLight);
 end;
-
-
-OrlanStrike.DivineStormButton = OrlanStrike.Button:CloneTo(
-{
-	SpellId = 53385
-});
 
 
 OrlanStrike.ExorcismButton = OrlanStrike.Button:CloneTo(
@@ -922,6 +892,12 @@ function OrlanStrike.MaxHolyPowerButton:UpdateState()
 end;
 
 
+OrlanStrike.DivineStormButton = OrlanStrike.MaxHolyPowerButton:CloneTo(
+{
+	SpellId = 53385
+});
+
+
 OrlanStrike.InquisitionButton = OrlanStrike.MaxHolyPowerButton:CloneTo(
 {
 	SpellId = 84963
@@ -940,15 +916,8 @@ OrlanStrike.HolyAvengerButton = OrlanStrike.Button:CloneTo(
 	SpellId = 105809
 });
 
-function OrlanStrike.HolyAvengerButton:UpdateState()
-	self.OrlanStrike.MaxHolyPowerButton.UpdateState(self);
-
-	self.IsAtMaxPower = self.IsAtMaxPower and not (self.OrlanStrike.HasHolyAvenger or self.OrlanStrike.HasAvengingWrath);
-	self.IsAlmostAtMaxPower = self.IsAlmostAtMaxPower and not (self.OrlanStrike.HasHolyAvenger or self.OrlanStrike.HasAvengingWrath);
-end;
-
 function OrlanStrike.HolyAvengerButton:UpdateDisplay()
-	self.OrlanStrike.MaxHolyPowerButton.UpdateDisplay(self);
+	self.OrlanStrike.Button.UpdateDisplay(self);
 
 	self:UpdateBurstButtonDisplay();
 end;
@@ -959,28 +928,10 @@ OrlanStrike.AvengingWrathButton = OrlanStrike.Button:CloneTo(
 	SpellId = 31884
 });
 
-function OrlanStrike.AvengingWrathButton:UpdateState()
-	self.OrlanStrike.Button.UpdateState(self);
-
-	self.IsAtMaxPower = self.IsAtMaxPower and not (self.OrlanStrike.HasHolyAvenger or self.OrlanStrike.HasAvengingWrath);
-end;
-
 function OrlanStrike.AvengingWrathButton:UpdateDisplay()
 	self.OrlanStrike.Button.UpdateDisplay(self);
 
 	self:UpdateBurstButtonDisplay();
-end;
-
-
-OrlanStrike.ConsecrationButton = OrlanStrike.Button:CloneTo(
-{
-	SpellId = 26573
-});
-
-function OrlanStrike.ConsecrationButton:UpdateState()
-	self.OrlanStrike.Button.UpdateState(self);
-
-	self.IsAtMaxPower = self.OrlanStrike.ManaPercent > 0.666;
 end;
 
 
