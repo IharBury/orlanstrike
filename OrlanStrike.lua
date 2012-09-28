@@ -1037,8 +1037,8 @@ OrlanStrike.JudgementButton = OrlanStrike.Button:CloneTo(
 
 function OrlanStrike.JudgementButton:IsVeryReasonable(holyPower, time)
 	return UnitCanAttack("player", "target") and 
-		not UnitAura("target", GetSpellInfo(81326)) and -- Physical Vulnerability
-		not UnitAura("target", GetSpellInfo(114729)); -- Damage Taken % Debuff
+		not UnitDebuff("target", GetSpellInfo(81326)) and -- Physical Vulnerability
+		not UnitDebuff("target", GetSpellInfo(114729)); -- Damage Taken % Debuff
 end;
 
 OrlanStrike.BurstButton = OrlanStrike.Button:CloneTo({});
