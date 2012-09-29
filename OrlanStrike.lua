@@ -916,7 +916,7 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 		if firstSpellIndex then
 			for spellIndex = 1, self.SpellCount do
 				local button = self.CastWindow.Buttons[spellIndex];
-				if button then
+				if button and button:GetCooldownExpiration() then
 					if button:GetCooldownExpiration() < nextTime then
 						nextSpellCooldownExpirations[spellIndex] = nextTime;
 					else
@@ -948,24 +948,26 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 end;
 
 function OrlanStrike:UpdateButtonCooldown(button)
-	local start, duration, enabled = GetSpellCooldown(button:GetSpellId());
-	local expirationTime;
-	if start and duration and (enabled == 1) then
-		expirationTime = start + duration;
-	else
-		start = nil;
-		duration = nil;
-		expirationTime = nil;
-	end;
-
-	duration = duration or 0;
-	expirationTime = expirationTime or 0;
-	if expirationTime ~= button.Cooldown.Off then
-		button.Cooldown.Off = expirationTime;
-		if (duration ~= 0) and (expirationTime ~= 0) then
-			button.Cooldown:SetCooldown(expirationTime - duration, duration);
+	if button:GetSpellId() then
+		local start, duration, enabled = GetSpellCooldown(button:GetSpellId());
+		local expirationTime;
+		if start and duration and (enabled == 1) then
+			expirationTime = start + duration;
 		else
-			button.Cooldown:SetCooldown(0, 10);
+			start = nil;
+			duration = nil;
+			expirationTime = nil;
+		end;
+
+		duration = duration or 0;
+		expirationTime = expirationTime or 0;
+		if expirationTime ~= button.Cooldown.Off then
+			button.Cooldown.Off = expirationTime;
+			if (duration ~= 0) and (expirationTime ~= 0) then
+				button.Cooldown:SetCooldown(expirationTime - duration, duration);
+			else
+				button.Cooldown:SetCooldown(0, 10);
+			end;
 		end;
 	end;
 end;
