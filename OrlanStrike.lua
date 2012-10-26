@@ -189,12 +189,12 @@ function OrlanStrike:CreateCastWindow()
 				Column = 1
 			})),
 		self:CreateButton(
-			castWindow, 
-			self.Button:CloneTo(
+			castWindow,
+			self.ExorcismButton:CloneTo(
 			{
-				SpellId = 879, -- Exorcism
+				OrlanStrike = self,
 				Row = 0,
-				Column = 2
+				Column = 2,
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -415,6 +415,10 @@ function OrlanStrike:UpdateSpells()
 			self.CastWindow.Buttons[index]:UpdateSpells();
 		end;
 	end;
+
+	self.SingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.SingleTargetPriorities);
+	self.MultiTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.MultiTargetPriorities);
+	self.HealingSpellPriorityIndexes = self:CalculateSpellPriorityIndexes(self.HealingSpellPriorities);
 end;
 
 function OrlanStrike:CreateButton(parent, prototype)
@@ -503,9 +507,6 @@ function OrlanStrike:HandleLoaded()
 	self.Config.Scale = self.Config.Scale or 1;
 
 	self.CastWindow = self:CreateCastWindow();
-	self.SingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.SingleTargetPriorities);
-	self.MultiTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.MultiTargetPriorities);
-	self.HealingSpellPriorityIndexes = self:CalculateSpellPriorityIndexes(self.HealingSpellPriorities);
 
 	self:Show();
 
@@ -528,6 +529,8 @@ function OrlanStrike:HandleLoaded()
 		end;
 	end;
 	self.EventFrame:SetScript("OnUpdate", self.EventFrame.HandleUpdate);
+
+	self:UpdateSpells();
 end;
 
 function OrlanStrike:HandleTalentChange()
@@ -857,8 +860,9 @@ end;
 
 function OrlanStrike:IsPrioritySpell(priorityIndex, holyPower, time)
 	local button = self.CastWindow.Buttons[priorityIndex.Index];
-	return button:IsVeryReasonable(holyPower, time) or
-		(not priorityIndex.VeryReasonable and button:IsReasonable(holyPower, time));
+	return button and
+		(button:IsVeryReasonable(holyPower, time) or
+			(not priorityIndex.VeryReasonable and button:IsReasonable(holyPower, time)));
 end;
 
 function OrlanStrike:GetSpellsToCast(priorityIndexes)
@@ -875,7 +879,7 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 		local priorityIndex = priorityIndexes[index];
 		local spellIndex = priorityIndex.Index;
 		local button = self.CastWindow.Buttons[spellIndex];
-		if self:IsPrioritySpell(priorityIndex, holyPower, button:GetCooldownExpiration()) then
+		if button and self:IsPrioritySpell(priorityIndex, holyPower, button:GetCooldownExpiration()) then
 			if (not minCooldownExpiration) or 
 					(minCooldownExpiration - self.MaxAbilityWaitTime > button:GetCooldownExpiration()) then
 				minCooldownExpiration = button:GetCooldownExpiration();
@@ -949,7 +953,7 @@ end;
 
 function OrlanStrike:UpdateButtonCooldown(button)
 	if button:GetSpellId() then
-		local start, duration, enabled = GetSpellCooldown(button:GetSpellId());
+		local start, duration, enabled = button:GetCooldown();
 		local expirationTime;
 		if start and duration and (enabled == 1) then
 			expirationTime = start + duration;
@@ -994,6 +998,10 @@ OrlanStrike.Button =
 	CloneTo = OrlanStrike.CloneTo
 };
 
+function OrlanStrike.Button:GetCooldown()
+	return GetSpellCooldown(self:GetSpellId());
+end;
+
 function OrlanStrike.Button:UpdateState()
 	self.IsLearned = FindSpellBookSlotBySpellID(self:GetSpellId());
 	self.IsAvailable = self.IsLearned and IsUsableSpell(self:GetSpellId());
@@ -1030,6 +1038,33 @@ function OrlanStrike.Button:GetCooldownExpiration()
 end;
 
 function OrlanStrike.Button:UpdateSpells()
+end;
+
+OrlanStrike.ExorcismButton = OrlanStrike.Button:CloneTo(
+{
+	SpellId = 879 -- Exorcism
+});
+
+function OrlanStrike.ExorcismButton:UpdateState()
+	self.OrlanStrike.Button.UpdateState(self);
+
+	self.CooldownExpiration = math.max(self.CooldownExpiration, self.OrlanStrike:GetCooldownExpiration(122032)); -- Exorcism with Glyph of Mass Exorcism
+end;
+
+function OrlanStrike.ExorcismButton:GetCooldown()
+	local start1, duration1, enable1 = GetSpellCooldown(self:GetSpellId());
+	local start2, duration2, enable2 = GetSpellCooldown(122032); -- Exorcism with Glyph of Mass Exorcism
+	local start, duration, enable;
+	if duration1 > duration2 then
+		start = start1;
+		duration = duration1;
+		enable = enable1;
+	else
+		start = start2;
+		duration = duration2;
+		enable = enable2;
+	end;
+	return start, duration, enable;
 end;
 
 OrlanStrike.JudgementButton = OrlanStrike.Button:CloneTo(
