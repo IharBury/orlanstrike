@@ -1073,7 +1073,8 @@ OrlanStrike.JudgementButton = OrlanStrike.Button:CloneTo(
 });
 
 function OrlanStrike.JudgementButton:IsVeryReasonable(holyPower, time)
-	return UnitCanAttack("player", "target") and 
+	return self:IsUsable(holyPower, time) and
+		UnitCanAttack("player", "target") and 
 		not UnitDebuff("target", GetSpellInfo(81326)) and -- Physical Vulnerability
 		not UnitDebuff("target", GetSpellInfo(114729)); -- Damage Taken % Debuff
 end;
