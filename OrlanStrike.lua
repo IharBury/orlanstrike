@@ -192,6 +192,7 @@ function OrlanStrike:CreateCastWindow()
 			self.MaxHolyPowerButton:CloneTo(
 			{
 				SpellId = 85256, -- Templar's Verdict
+				SharedCooldownSpellId = 53385, -- Divine Storm
 				Row = 0,
 				Column = 1
 			})),
@@ -208,6 +209,7 @@ function OrlanStrike:CreateCastWindow()
 			self.Button:CloneTo(
 			{
 				SpellId = 35395, -- Crusader Strike
+				SharedCooldownSpellId = 53595, -- Hammer of the Righteous
 				Row = 0,
 				Column = 3
 			})),
@@ -223,6 +225,7 @@ function OrlanStrike:CreateCastWindow()
 			self.MaxHolyPowerButton:CloneTo(
 			{
 				SpellId = 53385, -- Divine Storm
+				SharedCooldownSpellId = 85256, -- Templar's Verdict
 				Row = 1,
 				Column = 1
 			})),
@@ -239,6 +242,7 @@ function OrlanStrike:CreateCastWindow()
 			self.Button:CloneTo(
 			{
 				SpellId = 53595, -- Hammer of the Righteous
+				SharedCooldownSpellId = 35395, -- Crusader Strike
 				Row = 1,
 				Column = 3
 			})),
@@ -881,6 +885,7 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 	local minCooldownExpiration;
 	local firstSpellIndex;
 	local firstSpellId;
+	local sharedCooldownSpellId;
 	local index = 1;
 	while priorityIndexes[index] do
 		local priorityIndex = priorityIndexes[index];
@@ -892,6 +897,7 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 				minCooldownExpiration = button:GetCooldownExpiration();
 				firstSpellIndex = spellIndex;
 				firstSpellId = button:GetSpellId();
+				sharedCooldownSpellId = button:GetSharedCooldownSpellId();
 			end;
 		end;
 
@@ -933,6 +939,9 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 					else
 						nextSpellCooldownExpirations[spellIndex] = button:GetCooldownExpiration();
 					end;
+				end;
+				if sharedCooldownSpellId and button and (button:GetSpellId() == sharedCooldownSpellId) then
+					nextSpellCooldownExpirations[spellIndex] = minCooldownExpiration + 1000;
 				end;
 			end;
 			nextSpellCooldownExpirations[firstSpellIndex] = minCooldownExpiration + 1000;
@@ -1045,6 +1054,10 @@ function OrlanStrike.Button:GetCooldownExpiration()
 end;
 
 function OrlanStrike.Button:UpdateSpells()
+end;
+
+function OrlanStrike.Button:GetSharedCooldownSpellId()
+	return self.SharedCooldownSpellId;
 end;
 
 OrlanStrike.ExorcismButton = OrlanStrike.Button:CloneTo(
@@ -1307,6 +1320,14 @@ function OrlanStrike.VariableButton:GetCooldownExpiration()
 		cooldownExpiration = self.ActiveChoice:GetCooldownExpiration();
 	end;
 	return cooldownExpiration;
+end;
+
+function OrlanStrike.VariableButton:GetSharedCooldownSpellId()
+	local sharedCooldownSpellId;
+	if (self.ActiveChoice) then
+		sharedCooldownSpellId = self.ActiveChoice:GetSharedCooldownSpellId();
+	end;
+	return sharedCooldownSpellId;
 end;
 
 OrlanStrike:Initialize("OrlanStrikeConfig");
