@@ -112,6 +112,10 @@ function OrlanStrike:Initialize(configName)
 			VeryReasonable = true
 		},
 		{
+			SpellId = 85256, -- Templar's Verdict
+			VeryReasonable = true
+		},
+		{
 			SpellId = 879 -- Exorcism
 		},
 		{
@@ -119,6 +123,9 @@ function OrlanStrike:Initialize(configName)
 		},
 		{
 			SpellId = 53595 -- Hammer of the Righteous
+		},
+		{
+			SpellId = 35395 -- Crusader Strike
 		},
 		{
 			SpellId = 20271 -- Judgement
@@ -1109,7 +1116,7 @@ function OrlanStrike.HolyPowerButton:IsReasonable(holyPower, time)
 end;
 
 function OrlanStrike.HolyPowerButton:IsVeryReasonable(holyPower, time)
-	return (holyPower == 5) and self:IsReasonable(holyPower, time);
+	return (holyPower == UnitPowerMax("player", SPELL_POWER_HOLY_POWER)) and self:IsReasonable(holyPower, time);
 end;
 
 function OrlanStrike.HolyPowerButton:UpdateState()
