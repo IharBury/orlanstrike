@@ -1,4 +1,4 @@
-## Interface: 50100
+## Interface: 50400
 ## X-Min-Interface: 50000
 ## Title: OrlanStrike
 ## Version: 1.3.3
