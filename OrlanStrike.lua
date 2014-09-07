@@ -201,8 +201,9 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.JudgementButton:CloneTo(
+			self.Button:CloneTo(
 			{
+				SpellId = 20271, -- Judgement
 				Row = 0,
 				Column = 4
 			})),
@@ -244,17 +245,9 @@ function OrlanStrike:CreateCastWindow()
 			castWindow, 
 			self.BurstButton:CloneTo(
 			{
-				SpellId = 31884,
+				SpellId = 31884, -- Avenging Wrath
 				Row = 2,
 				Column = 1
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.BurstButton:CloneTo(
-			{
-				SpellId = 86698,
-				Row = 2,
-				Column = 2
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -357,28 +350,11 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow,
-			self.VariableButton:CloneTo(
+			self.WeaponsOfTheLightButton:CloneTo(
 			{
 				Row = 1,
 				Column = 0,
-				Choices =
-				{
-					self.BurstButton:CloneTo(
-					{
-						OrlanStrike = self,
-						SpellId = 114165 -- Holy Prism
-					}),
-					self.BurstButton:CloneTo(
-					{
-						OrlanStrike = self,
-						SpellId = 114158 -- Light's Hammer
-					}),
-					self.BurstButton:CloneTo(
-					{
-						OrlanStrike = self,
-						SpellId = 114157 -- Execution Sentence
-					})
-				}
+				SpellId = 175699 -- Weapons of the Light
 			}))
 	};
 	self.SpellCount = 25;
@@ -441,22 +417,11 @@ function OrlanStrike:CreateButton(parent, prototype)
 	button.Spell:SetAllPoints();
 	button.Spell:RegisterForClicks("LeftButtonDown");
 
-	self:SetupButton(button);
+	button:SetupButton();
 
 	self:CreateBorder(button, 2, 2);
 
 	return button;
-end;
-
-function OrlanStrike:SetupButton(button)
-	local _, _, icon = GetSpellInfo(button:GetSpellId());
-	button.Background:SetTexture(icon);
-
-	button.Spell:SetAttribute("type", "spell");
-	button.Spell:SetAttribute("spell", button:GetSpellId());
-	if button.Target then
-		button.Spell:SetAttribute("unit", button.Target);
-	end;
 end;
 
 function OrlanStrike:CreateBorder(window, thickness, offset)
@@ -685,7 +650,7 @@ end;
 
 function OrlanStrike:GetRawCooldownExpiration(spellId)
 	local expiration;
-	local start, duration = GetSpellCooldown(spellId);
+	local start, duration = GetSpellCooldown(GetSpellInfo(spellId));
 	if start and duration and (duration ~= 0) and (start + duration > self.Now) then
 		expiration = start + duration;
 	else
@@ -989,11 +954,11 @@ OrlanStrike.Button =
 };
 
 function OrlanStrike.Button:GetCooldown()
-	return GetSpellCooldown(self:GetSpellId());
+	return GetSpellCooldown(GetSpellInfo(self:GetSpellId()));
 end;
 
 function OrlanStrike.Button:UpdateState()
-	self.IsLearned = FindSpellBookSlotBySpellID(self:GetSpellId());
+	self.IsLearned = IsSpellKnown(self:GetSpellId());
 	self.IsAvailable = self.IsLearned and IsUsableSpell(self:GetSpellId());
 	self.CooldownExpiration = self.OrlanStrike:GetCooldownExpiration(self:GetSpellId());
 end;
@@ -1034,6 +999,17 @@ function OrlanStrike.Button:GetSharedCooldownSpellId()
 	return self.SharedCooldownSpellId;
 end;
 
+function OrlanStrike.Button:SetupButton()
+	local _, _, icon = GetSpellInfo(self:GetSpellId());
+	self.Background:SetTexture(icon);
+
+	self.Spell:SetAttribute("type", "spell");
+	self.Spell:SetAttribute("spell", self:GetSpellId());
+	if self.Target then
+		self.Spell:SetAttribute("unit", self.Target);
+	end;
+end;
+
 OrlanStrike.ExorcismButton = OrlanStrike.Button:CloneTo(
 {
 	SpellId = 879 -- Exorcism
@@ -1046,8 +1022,8 @@ function OrlanStrike.ExorcismButton:UpdateState()
 end;
 
 function OrlanStrike.ExorcismButton:GetCooldown()
-	local start1, duration1, enable1 = GetSpellCooldown(self:GetSpellId());
-	local start2, duration2, enable2 = GetSpellCooldown(122032); -- Exorcism with Glyph of Mass Exorcism
+	local start1, duration1, enable1 = GetSpellCooldown(GetSpellInfo(self:GetSpellId()));
+	local start2, duration2, enable2 = GetSpellCooldown(GetSpellInfo(122032)); -- Exorcism with Glyph of Mass Exorcism
 	local start, duration, enable;
 	if duration1 > duration2 then
 		start = start1;
@@ -1061,18 +1037,6 @@ function OrlanStrike.ExorcismButton:GetCooldown()
 	return start, duration, enable;
 end;
 
-OrlanStrike.JudgementButton = OrlanStrike.Button:CloneTo(
-{
-	SpellId = 20271 -- Judgement
-});
-
-function OrlanStrike.JudgementButton:IsVeryReasonable(holyPower, time)
-	return self:IsUsable(holyPower, time) and
-		UnitCanAttack("player", "target") and 
-		not UnitDebuff("target", GetSpellInfo(81326)) and -- Physical Vulnerability
-		not UnitDebuff("target", GetSpellInfo(114729)); -- Damage Taken % Debuff
-end;
-
 OrlanStrike.BurstButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.BurstButton:UpdateDisplay(window, holyPower)
@@ -1081,6 +1045,30 @@ function OrlanStrike.BurstButton:UpdateDisplay(window, holyPower)
 	if self.IsAvailable and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
 		window:SetAlpha(1);
 		self.OrlanStrike:SetBorderColor(window, 1, 1, 1, 1);
+	end;
+end;
+
+OrlanStrike.WeaponsOfTheLightButton = OrlanStrike.BurstButton:CloneTo(
+{
+	SpellId = 175699
+});
+
+function OrlanStrike.WeaponsOfTheLightButton:UpdateState()
+	self.OrlanStrike.Button.UpdateState(self);
+	self.IsAvailable = self.IsLearned and 
+		(IsUsableSpell(114165) or -- Holy Prism
+			IsUsableSpell(114158) or -- Light's Hammer
+			IsUsableSpell(114157)); -- Execution Sentence
+end;
+
+function OrlanStrike.WeaponsOfTheLightButton:SetupButton()
+	local _, _, icon = GetSpellInfo(self:GetSpellId());
+	self.Background:SetTexture(icon);
+
+	self.Spell:SetAttribute("type", "macro");
+	self.Spell:SetAttribute("macrotext", "/cast " .. GetSpellInfo(self:GetSpellId()));
+	if self.Target then
+		self.Spell:SetAttribute("unit", self.Target);
 	end;
 end;
 
@@ -1139,7 +1127,7 @@ end;
 
 OrlanStrike.SealOfTruthButton = OrlanStrike.SealButton:CloneTo(
 {
-	SpellId = 31801
+	SpellId = 105361
 });
 
 function OrlanStrike.SealOfTruthButton:IsReasonable(holyPower, time)
@@ -1224,7 +1212,7 @@ function OrlanStrike.VariableButton:UpdateSpells()
 
 	self.ActiveChoice = activeChoice;
 
-	self.OrlanStrike:SetupButton(self);
+	self:SetupButton();
 end;
 
 function OrlanStrike.VariableButton:UpdateState()
