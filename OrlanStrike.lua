@@ -560,12 +560,6 @@ function OrlanStrike:DetectArtOfWar()
 	self.HasArtOfWar = UnitBuff("player", artOfWarSpellName);
 end;
 
-function OrlanStrike:DetectDivinePurpose()
-	local divinePurposeSpellName = GetSpellInfo(90174); -- Divine Purpose
-	local _, _, _, _, _, _, expirationTime = UnitBuff("player", divinePurposeSpellName);
-	self.DivinePurposeExpirationTime = expirationTime;
-end;
-
 function OrlanStrike:DetectAvengingWrath()
 	local avengingWrathSpellName = GetSpellInfo(31884); -- Avenging Wrath
 	self.HasAvengingWrath = UnitBuff("player", avengingWrathSpellName);
@@ -604,7 +598,6 @@ end;
 function OrlanStrike:DetectAuras()
 	self:DetectHolyAvenger();
 	self:DetectArtOfWar();
-	self:DetectDivinePurpose(); -- random gain, button spend
 	self:DetectAvengingWrath();
 	self:DetectForbearance();
 	self:DetectSealOfTruth();
@@ -717,10 +710,13 @@ function OrlanStrike:UpdateThreatBar()
 end;
 
 function OrlanStrike:GetCurrentGameState()
+	local divinePurposeSpellName = GetSpellInfo(90174); -- Divine Purpose
+	local _, _, _, _, _, _, divinePurposeExpirationTime = UnitBuff("player", divinePurposeSpellName);
+
 	local gameState =
 	{
 		HolyPower = UnitPower("player", SPELL_POWER_HOLY_POWER), 
-		DivinePurposeExpirationTime = self.DivinePurposeExpirationTime,
+		DivinePurposeExpirationTime = divinePurposeExpirationTime,
 		Time = self.GcdExpiration,
 		HasDivinePurpose = function(self)
 			return self.DivinePurposeExpirationTime and
