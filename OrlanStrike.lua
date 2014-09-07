@@ -67,16 +67,12 @@ function OrlanStrike:Initialize(configName)
 	};
 	self.HolyPowerSpenders =
 	{
-		[84963] = true, -- Inquisition
 		[85256] = true, -- Templar's Verdict
 		[53385] = true, -- Divine Storm
 		[85673] = true -- Word of Glory
 	};
 	self.SingleTargetPriorities =
 	{
-		{ 
-			SpellId = 84963 -- Inquisition
-		},
 		{
 			SpellId = 20271, -- Judgement
 			VeryReasonable = true
@@ -100,9 +96,6 @@ function OrlanStrike:Initialize(configName)
 	};
 	self.MultiTargetPriorities =
 	{
-		{ 
-			SpellId = 84963 -- Inquisition
-		},
 		{
 			SpellId = 20271, -- Judgement
 			VeryReasonable = true
@@ -180,13 +173,6 @@ function OrlanStrike:CreateCastWindow()
 
 	castWindow.Buttons =
 	{
-		self:CreateButton(
-			castWindow, 
-			self.InquisitionButton:CloneTo(
-			{
-				Row = 0,
-				Column = 0
-			})),
 		self:CreateButton(
 			castWindow, 
 			self.MaxHolyPowerButton:CloneTo(
@@ -626,17 +612,6 @@ function OrlanStrike:DetectDivinePurpose()
 	self.HasDivinePurpose = UnitBuff("player", divinePurposeSpellName);
 end;
 
-function OrlanStrike:DetectInquisition()
-	local inquisitionSpellName = GetSpellInfo(84963); -- Inquisition
-	local hasInquisition, _, _, _, _, _, expires = UnitBuff("player", inquisitionSpellName);
-	self.HasInquisition = hasInquisition;
-	if self.HasInquisition then
-		self.InquisitionDurationLeft = expires - self.Now;
-	else
-		self.InquisitionDurationLeft = 0;
-	end;
-end;
-
 function OrlanStrike:DetectAvengingWrath()
 	local avengingWrathSpellName = GetSpellInfo(31884); -- Avenging Wrath
 	self.HasAvengingWrath = UnitBuff("player", avengingWrathSpellName);
@@ -676,7 +651,6 @@ function OrlanStrike:DetectAuras()
 	self:DetectHolyAvenger();
 	self:DetectArtOfWar();
 	self:DetectDivinePurpose();
-	self:DetectInquisition();
 	self:DetectAvengingWrath();
 	self:DetectForbearance();
 	self:DetectSealOfTruth();
@@ -1142,21 +1116,6 @@ OrlanStrike.MaxHolyPowerButton = OrlanStrike.HolyPowerButton:CloneTo({});
 
 function OrlanStrike.MaxHolyPowerButton:IsUsable(holyPower, time)
 	return (holyPower >= 3) and OrlanStrike.Button.IsUsable(self, holyPower, time);
-end;
-
-OrlanStrike.InquisitionButton = OrlanStrike.HolyPowerButton:CloneTo(
-{
-	SpellId = 84963
-});
-
-function OrlanStrike.InquisitionButton:IsReasonable(holyPower, time)
-	return self.OrlanStrike.HolyPowerButton.IsReasonable(self, holyPower, time) and
-		(self.OrlanStrike.InquisitionDurationLeft + GetTime() - time <= 3);
-end;
-
-function OrlanStrike.InquisitionButton:IsVeryReasonable(holyPower, time)
-	return self:IsReasonable(holyPower, time) and
-		(self.OrlanStrike.InquisitionDurationLeft + GetTime() - time <= 0);
 end;
 
 OrlanStrike.HealthButton = OrlanStrike.Button:CloneTo({});
