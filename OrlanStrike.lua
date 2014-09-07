@@ -42,10 +42,8 @@ function OrlanStrike:Initialize(configName)
 			orlanStrike:HandleLoaded();
 		elseif (event == "ACTIVE_TALENT_GROUP_CHANGED") then
 			orlanStrike:HandleTalentChange();
-		elseif (event == "UNIT_SPELLCAST_START") and
-				(arg1 == "player") and
-				orlanStrike.HolyPowerGenerators[arg5] then
-			orlanStrike:HandleHolyPowerGenerator();
+		elseif (event == "UNIT_SPELLCAST_START") and (arg1 == "player") then
+			orlanStrike:HandleAbilityUse(arg5);
 		elseif (event == "SPELLS_CHANGED") then
 			orlanStrike:UpdateSpells();
 		end;
@@ -540,17 +538,15 @@ function OrlanStrike:Hide()
 	end;
 end;
 
-function OrlanStrike:HandleHolyPowerGenerator()
-	local holyPowerAmount = UnitPower("player", SPELL_POWER_HOLY_POWER);
-	if holyPowerAmount < 3 then
-		self:DetectHolyAvenger();
-
-		if self.HasHolyAvenger then
-			self.HolyPowerOverride = 3;
-		else
-			self.HolyPowerOverride = holyPowerAmount + 1;
+function OrlanStrike:HandleAbilityUse(spellId)
+	local gameState = self:GetCurrentGameState();
+	for spellIndex = 1, self.SpellCount do
+		local button = self.CastWindow.Buttons[spellIndex];
+		if button and button:GetSpellId() and (button:GetSpellId() == spellId) then
+			button:UpdateGameState(gameState);
+			self.GameStateOverride = gameState;
+			self.GameStateOverrideTimeout = GetTime() + 0.5;
 		end;
-		self.HolyPowerOverrideTimeout = GetTime() + 1;
 	end;
 end;
 
@@ -616,15 +612,6 @@ function OrlanStrike:DetectAuras()
 	self:DetectDispellableDebuffs();
 end;
 
-function OrlanStrike:DetectHolyPower()
-	self.HolyPowerAmount = UnitPower("player", SPELL_POWER_HOLY_POWER);
-	if self.HolyPowerOverride and 
-			(self.HolyPowerOverrideTimeout > self.Now) and
-			(self.HolyPowerOverride > self.HolyPowerAmount) then
-		self.HolyPowerAmount = self.HolyPowerOVerride;
-	end;
-end;
-
 function OrlanStrike:DetectHealthPercent()
 	self.HealthPercent = UnitHealth("player") / UnitHealthMax("player");
 end;
@@ -665,18 +652,19 @@ function OrlanStrike:DetectGcd()
 end;
 
 function OrlanStrike:UpdateHolyPowerBar()
-	local basePower = self.HolyPowerAmount;
+	local holyPower = self:GetCurrentGameState().HolyPower;
+	local basePower = holyPower;
 	if basePower > 3 then
 		basePower = 3;
 	end;
-	local additionalPower = self.HolyPowerAmount - basePower;
+	local additionalPower = holyPower - basePower;
 	self.CastWindow.HolyPowerBar:SetWidth(self.CastWindowWidth * basePower / 3);
 	self.CastWindow.HolyPowerBar2:SetWidth(self.CastWindowWidth * additionalPower / 3);
-	if self.HolyPowerAmount == 0 then
+	if holyPower == 0 then
 		self.CastWindow.HolyPowerBar:SetTexture(0, 0, 0, 0);
-	elseif self.HolyPowerAmount == 1 then
+	elseif holyPower == 1 then
 		self.CastWindow.HolyPowerBar:SetTexture(1, 0, 0, 0.3);
-	elseif self.HolyPowerAmount == 2 then
+	elseif holyPower == 2 then
 		self.CastWindow.HolyPowerBar:SetTexture(1, 1, 0, 0.3);
 	else
 		self.CastWindow.HolyPowerBar:SetTexture(0, 1, 0, 0.3);
@@ -729,9 +717,9 @@ function OrlanStrike:UpdateThreatBar()
 end;
 
 function OrlanStrike:GetCurrentGameState()
-	return
+	local gameState =
 	{
-		HolyPower = self.HolyPowerAmount, 
+		HolyPower = UnitPower("player", SPELL_POWER_HOLY_POWER), 
 		DivinePurposeExpirationTime = self.DivinePurposeExpirationTime,
 		Time = self.GcdExpiration,
 		HasDivinePurpose = function(self)
@@ -739,12 +727,18 @@ function OrlanStrike:GetCurrentGameState()
 				self.DivinePurposeExpirationTime > self.Time;
 		end
 	};
+
+	if self.GameStateOverride and (self.GameStateOverrideTimeout > GetTime()) then
+		gameState.HolyPower = self.GameStateOverride.HolyPower;
+		gameState.DivinePurposeExpirationTime = self.GameStateOverride.DivinePurposeExpirationTime;
+	end;
+
+	return gameState;
 end;
 
 function OrlanStrike:UpdateStatus()
 	self:DetectNow();
 	self:DetectAuras();
-	self:DetectHolyPower();
 	self:DetectHealthPercent();
 	self:DetectManaPercent();
 	self:DetectThreat();
@@ -817,8 +811,6 @@ function OrlanStrike:IsPrioritySpell(priorityIndex, gameState)
 end;
 
 function OrlanStrike:GetSpellsToCast(priorityIndexes)
-	local holyPower = self.HolyPowerAmount;
-
 	local minCooldownExpiration;
 	local firstSpellIndex;
 	local firstSpellId;
