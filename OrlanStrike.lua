@@ -65,12 +65,6 @@ function OrlanStrike:Initialize(configName)
 		[35395] = true, -- Crusader Strike
 		[53595] = true -- Hammer of the Righteous
 	};
-	self.HolyPowerSpenders =
-	{
-		[85256] = true, -- Templar's Verdict
-		[53385] = true, -- Divine Storm
-		[85673] = true -- Word of Glory
-	};
 	self.SingleTargetPriorities =
 	{
 		{
@@ -175,10 +169,9 @@ function OrlanStrike:CreateCastWindow()
 	{
 		self:CreateButton(
 			castWindow, 
-			self.MaxHolyPowerButton:CloneTo(
+			self.ThreeHolyPowerButton:CloneTo(
 			{
 				SpellId = 85256, -- Templar's Verdict
-				SharedCooldownSpellId = 53385, -- Divine Storm
 				Row = 0,
 				Column = 1
 			})),
@@ -192,7 +185,7 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.Button:CloneTo(
+			self.HolyPowerGeneratorButton:CloneTo(
 			{
 				SpellId = 35395, -- Crusader Strike
 				SharedCooldownSpellId = 53595, -- Hammer of the Righteous
@@ -201,7 +194,7 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.Button:CloneTo(
+			self.HolyPowerGeneratorButton:CloneTo(
 			{
 				SpellId = 20271, -- Judgement
 				Row = 0,
@@ -209,16 +202,15 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.MaxHolyPowerButton:CloneTo(
+			self.ThreeHolyPowerButton:CloneTo(
 			{
 				SpellId = 53385, -- Divine Storm
-				SharedCooldownSpellId = 85256, -- Templar's Verdict
 				Row = 1,
 				Column = 1
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.Button:CloneTo(
+			self.HolyPowerGeneratorButton:CloneTo(
 			{
 				SpellId = 24275, -- Hammer of Wrath
 				Row = 1,
@@ -226,7 +218,7 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.Button:CloneTo(
+			self.HolyPowerGeneratorButton:CloneTo(
 			{
 				SpellId = 53595, -- Hammer of the Righteous
 				SharedCooldownSpellId = 35395, -- Crusader Strike
@@ -574,7 +566,8 @@ end;
 
 function OrlanStrike:DetectDivinePurpose()
 	local divinePurposeSpellName = GetSpellInfo(90174); -- Divine Purpose
-	self.HasDivinePurpose = UnitBuff("player", divinePurposeSpellName);
+	local _, _, _, _, _, _, expirationTime = UnitBuff("player", divinePurposeSpellName);
+	self.DivinePurposeExpirationTime = expirationTime;
 end;
 
 function OrlanStrike:DetectAvengingWrath()
@@ -615,7 +608,7 @@ end;
 function OrlanStrike:DetectAuras()
 	self:DetectHolyAvenger();
 	self:DetectArtOfWar();
-	self:DetectDivinePurpose();
+	self:DetectDivinePurpose(); -- random gain, button spend
 	self:DetectAvengingWrath();
 	self:DetectForbearance();
 	self:DetectSealOfTruth();
@@ -735,6 +728,19 @@ function OrlanStrike:UpdateThreatBar()
 	end;
 end;
 
+function OrlanStrike:GetCurrentGameState()
+	return
+	{
+		HolyPower = self.HolyPowerAmount, 
+		DivinePurposeExpirationTime = self.DivinePurposeExpirationTime,
+		Time = self.GcdExpiration,
+		HasDivinePurpose = function(self)
+			return self.DivinePurposeExpirationTime and
+				self.DivinePurposeExpirationTime > self.Time;
+		end
+	};
+end;
+
 function OrlanStrike:UpdateStatus()
 	self:DetectNow();
 	self:DetectAuras();
@@ -750,16 +756,11 @@ function OrlanStrike:UpdateStatus()
 	self:UpdateManaBar();
 	self:UpdateThreatBar();
 
-	local holyPower = self.HolyPowerAmount;
-	if self.HasDivinePurpose then
-		holyPower = 3;
-	end;
-
 	for spellIndex = 1, self.SpellCount do
 		local button = self.CastWindow.Buttons[spellIndex];
 		if button then
 			button:UpdateState();
-			button:UpdateDisplay(button, holyPower);
+			button:UpdateDisplay(button, self:GetCurrentGameState());
 		end;
 	end;
 
@@ -797,7 +798,7 @@ function OrlanStrike:UpdateStatus()
 	local healingSpellIndex = 1;
 	while self.HealingSpellPriorityIndexes[healingSpellIndex] do
 		local priorityIndex = self.HealingSpellPriorityIndexes[healingSpellIndex];
-		if self:IsPrioritySpell(priorityIndex, holyPower, GetTime()) then
+		if self:IsPrioritySpell(priorityIndex, self:GetCurrentGameState()) then
 			local button = self.CastWindow.Buttons[priorityIndex.Index];
 			self:SetBorderColor(button, 1, 0.5, 0.5, 1);
 			button:SetAlpha(1);
@@ -808,29 +809,27 @@ function OrlanStrike:UpdateStatus()
 	end;
 end;
 
-function OrlanStrike:IsPrioritySpell(priorityIndex, holyPower, time)
+function OrlanStrike:IsPrioritySpell(priorityIndex, gameState)
 	local button = self.CastWindow.Buttons[priorityIndex.Index];
 	return button and
-		(button:IsVeryReasonable(holyPower, time) or
-			(not priorityIndex.VeryReasonable and button:IsReasonable(holyPower, time)));
+		(button:IsVeryReasonable(gameState) or
+			(not priorityIndex.VeryReasonable and button:IsReasonable(gameState)));
 end;
 
 function OrlanStrike:GetSpellsToCast(priorityIndexes)
 	local holyPower = self.HolyPowerAmount;
-	if self.HasDivinePurpose then
-		holyPower = 3;
-	end;
 
 	local minCooldownExpiration;
 	local firstSpellIndex;
 	local firstSpellId;
 	local sharedCooldownSpellId;
 	local index = 1;
+	local gameState = self:GetCurrentGameState();
 	while priorityIndexes[index] do
 		local priorityIndex = priorityIndexes[index];
 		local spellIndex = priorityIndex.Index;
 		local button = self.CastWindow.Buttons[spellIndex];
-		if button and self:IsPrioritySpell(priorityIndex, holyPower, button:GetCooldownExpiration()) then
+		if button and self:IsPrioritySpell(priorityIndex, gameState) then
 			if (not minCooldownExpiration) or 
 					(minCooldownExpiration - self.MaxAbilityWaitTime > button:GetCooldownExpiration()) then
 				minCooldownExpiration = button:GetCooldownExpiration();
@@ -847,29 +846,11 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 	local nextSpellIndex;
 	if firstSpellIndex then
 		local nextTime = minCooldownExpiration + 1.25;
-		local nextHolyPower = self.HolyPowerAmount;
-		if self.HolyPowerSpenders[firstSpellId] then
-			if not self.HasDivinePurpose then
-				nextHolyPower = nextHolyPower - 3;
-				if nextHolyPower < 0 then
-					nextHolyPower = 0;
-				end;
-			end;
-		elseif self.HasDivinePurpose then
-			nextHolyPower = 3;
-		elseif self.HolyPowerGenerators[firstSpellId] then
-			if self.HasHolyAvenger then
-				nextHolyPower = nextHolyPower + 3;
-			else
-				nextHolyPower = nextHolyPower + 1;
-			end;
-			if nextHolyPower > UnitPowerMax("player", SPELL_POWER_HOLY_POWER) then
-				nextHolyPower = UnitPowerMax("player", SPELL_POWER_HOLY_POWER);
-			end;
-		end;
-
 		local nextSpellCooldownExpirations = {};
+		local nextGameState = self:GetCurrentGameState();
 		if firstSpellIndex then
+			local firstSpellButton = self.CastWindow.Buttons[firstSpellIndex];
+			firstSpellButton:UpdateGameState(nextGameState);
 			for spellIndex = 1, self.SpellCount do
 				local button = self.CastWindow.Buttons[spellIndex];
 				if button and button:GetCooldownExpiration() then
@@ -885,15 +866,17 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 			end;
 			nextSpellCooldownExpirations[firstSpellIndex] = minCooldownExpiration + 1000;
 		end;
+		nextGameState.Time = nextTime;
 
 		index = 1;
 		while priorityIndexes[index] do
 			local priorityIndex = priorityIndexes[index];
 			local spellIndex = priorityIndex.Index;
 			local button = self.CastWindow.Buttons[spellIndex];
-			if self:IsPrioritySpell(priorityIndex, nextHolyPower, nextSpellCooldownExpirations[spellIndex]) then
+			if self:IsPrioritySpell(priorityIndex, nextGameState) then
 				if (not nextMinCooldownExpiration) or 
-						(nextMinCooldownExpiration - self.MaxAbilityWaitTime > nextSpellCooldownExpirations[spellIndex]) then
+						(nextMinCooldownExpiration - self.MaxAbilityWaitTime > 
+							nextSpellCooldownExpirations[spellIndex]) then
 					nextMinCooldownExpiration = nextSpellCooldownExpirations[spellIndex];
 					nextSpellIndex = spellIndex;
 				end;
@@ -953,6 +936,9 @@ OrlanStrike.Button =
 	CloneTo = OrlanStrike.CloneTo
 };
 
+function OrlanStrike.Button:UpdateGameState(gameState)
+end;
+
 function OrlanStrike.Button:GetCooldown()
 	return GetSpellCooldown(GetSpellInfo(self:GetSpellId()));
 end;
@@ -963,19 +949,19 @@ function OrlanStrike.Button:UpdateState()
 	self.CooldownExpiration = self.OrlanStrike:GetCooldownExpiration(self:GetSpellId());
 end;
 
-function OrlanStrike.Button:IsUsable(holyPower, time)
-	return self.IsAvailable and (self:GetCooldownExpiration() <= time);
+function OrlanStrike.Button:IsUsable(gameState)
+	return self.IsAvailable and (self:GetCooldownExpiration() <= gameState.Time);
 end;
 
-function OrlanStrike.Button:IsReasonable(holyPower, time)
-	return self:IsUsable(holyPower, time);
+function OrlanStrike.Button:IsReasonable(gameState)
+	return self:IsUsable(gameState);
 end;
 
-function OrlanStrike.Button:IsVeryReasonable(holyPower, time)
+function OrlanStrike.Button:IsVeryReasonable(gameState)
 	return false;
 end;
 
-function OrlanStrike.Button:UpdateDisplay(window, holyPower)
+function OrlanStrike.Button:UpdateDisplay(window, gameState)
 	window:SetAlpha(0.5);
 	self.OrlanStrike:SetBorderColor(window, 0, 0, 0, 0);
 
@@ -1010,7 +996,24 @@ function OrlanStrike.Button:SetupButton()
 	end;
 end;
 
-OrlanStrike.ExorcismButton = OrlanStrike.Button:CloneTo(
+OrlanStrike.HolyPowerGeneratorButton = OrlanStrike.Button:CloneTo({});
+
+function OrlanStrike.HolyPowerGeneratorButton:UpdateGameState(gameState)
+	self.OrlanStrike.Button.UpdateGameState(self, gameState);
+
+	if self.OrlanStrike.HasHolyAvenger then
+		gameState.HolyPower = gameState.HolyPower + 3;
+	else
+		gameState.HolyPower = gameState.HolyPower + 1;
+	end;
+
+	local maxHolyPower = UnitPowerMax("player", SPELL_POWER_HOLY_POWER);
+	if gameState.HolyPower > maxHolyPower then
+		gameState.HolyPower = maxHolyPower;
+	end;
+end;
+
+OrlanStrike.ExorcismButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 {
 	SpellId = 879 -- Exorcism
 });
@@ -1039,10 +1042,10 @@ end;
 
 OrlanStrike.BurstButton = OrlanStrike.Button:CloneTo({});
 
-function OrlanStrike.BurstButton:UpdateDisplay(window, holyPower)
-	self.OrlanStrike.Button.UpdateDisplay(self, window, holyPower);
+function OrlanStrike.BurstButton:UpdateDisplay(window, gameState)
+	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self.IsAvailable and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
+	if self.IsAvailable and self:IsReasonable(gameState) then
 		window:SetAlpha(1);
 		self.OrlanStrike:SetBorderColor(window, 1, 1, 1, 1);
 	end;
@@ -1074,10 +1077,10 @@ end;
 
 OrlanStrike.SealButton = OrlanStrike.Button:CloneTo({});
 
-function OrlanStrike.SealButton:UpdateDisplay(window, holyPower)
-	self.OrlanStrike.Button.UpdateDisplay(self, window, holyPower);
+function OrlanStrike.SealButton:UpdateDisplay(window, gameState)
+	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self.IsAvailable and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
+	if self.IsAvailable and self:IsReasonable(gameState) then
 		self.OrlanStrike:SetBorderColor(window, 0.2, 0.2, 1, 1);
 	else
 		window:SetAlpha(0.1);
@@ -1086,31 +1089,52 @@ end;
 
 OrlanStrike.HolyPowerButton = OrlanStrike.Button:CloneTo({});
 
-function OrlanStrike.HolyPowerButton:IsReasonable(holyPower, time)
-	return (holyPower >= 3) and self.OrlanStrike.Button.IsReasonable(self, holyPower, time);
+function OrlanStrike.HolyPowerButton:UpdateGameState(gameState)
+	self.OrlanStrike.Button.UpdateGameState(self, gameState);
+
+	if gameState:HasDivinePurpose() then
+		gameState.DivinePurposeExpirationTime = nil;
+	elseif gameState.HolyPower < 3 then
+		gameState.HolyPower = 0;
+	else
+		gameState.HolyPower = gameState.HolyPower - 3;
+	end;
 end;
 
-function OrlanStrike.HolyPowerButton:IsVeryReasonable(holyPower, time)
-	return (holyPower == UnitPowerMax("player", SPELL_POWER_HOLY_POWER)) and self:IsReasonable(holyPower, time);
+function OrlanStrike.HolyPowerButton:IsReasonable(gameState)
+	return ((gameState.HolyPower >= 3) or gameState:HasDivinePurpose()) and 
+		self.OrlanStrike.Button.IsReasonable(self, gameState);
 end;
 
-function OrlanStrike.HolyPowerButton:UpdateState()
-	self.OrlanStrike.Button.UpdateState(self);
-
-	self.IsAvailable = self.IsLearned;
+function OrlanStrike.HolyPowerButton:IsVeryReasonable(gameState)
+	return self:IsReasonable(gameState) and
+		(gameState.HolyPower == UnitPowerMax("player", SPELL_POWER_HOLY_POWER) or gameState:HasDivinePurpose());
 end;
 
-OrlanStrike.MaxHolyPowerButton = OrlanStrike.HolyPowerButton:CloneTo({});
+OrlanStrike.ThreeHolyPowerButton = OrlanStrike.HolyPowerButton:CloneTo({});
 
-function OrlanStrike.MaxHolyPowerButton:IsUsable(holyPower, time)
-	return (holyPower >= 3) and OrlanStrike.Button.IsUsable(self, holyPower, time);
+function OrlanStrike.ThreeHolyPowerButton:IsUsable(gameState)
+	return ((gameState.HolyPower >= 3) or gameState:HasDivinePurpose()) and 
+		OrlanStrike.Button.IsUsable(self, gameState);
+end;
+
+OrlanStrike.SeraphimButton = OrlanStrike.HolyPowerButton:CloneTo({});
+
+function OrlanStrike.SeraphimButton:IsUsable(gameState)
+	return (gameState.HolyPower >= 5) and 
+		OrlanStrike.Button.IsUsable(self, gameState);
+end;
+
+function OrlanStrike.SeraphimButton:IsReasonable(gameState)
+	return (gameState.HolyPower >= 5) and 
+		self.OrlanStrike.HolyPowerButton.IsReasonable(self, gameState); -- ...
 end;
 
 OrlanStrike.HealthButton = OrlanStrike.Button:CloneTo({});
 
-function OrlanStrike.HealthButton:IsReasonable(holyPower, time)
+function OrlanStrike.HealthButton:IsReasonable(gameState)
 	return (self.OrlanStrike.HealthPercent <= 0.2) and 
-		self.OrlanStrike.Button.IsReasonable(self, holyPower, time);
+		self.OrlanStrike.Button.IsReasonable(self, gameState);
 end;
 
 OrlanStrike.LayOnHandsButton = OrlanStrike.HealthButton:CloneTo(
@@ -1130,8 +1154,8 @@ OrlanStrike.SealOfTruthButton = OrlanStrike.SealButton:CloneTo(
 	SpellId = 105361
 });
 
-function OrlanStrike.SealOfTruthButton:IsReasonable(holyPower, time)
-	return self:IsUsable(holyPower, time) and not self.OrlanStrike.HasSealOfTruth;
+function OrlanStrike.SealOfTruthButton:IsReasonable(gameState)
+	return self:IsUsable(gameState) and not self.OrlanStrike.HasSealOfTruth;
 end;
 
 OrlanStrike.SealOfRighteousnessButton = OrlanStrike.SealButton:CloneTo(
@@ -1139,8 +1163,8 @@ OrlanStrike.SealOfRighteousnessButton = OrlanStrike.SealButton:CloneTo(
 	SpellId = 20154
 });
 
-function OrlanStrike.SealOfRighteousnessButton:IsReasonable(holyPower, time)
-	return self:IsUsable(holyPower, time) and not self.OrlanStrike.HasSealOfRighteousness;
+function OrlanStrike.SealOfRighteousnessButton:IsReasonable(gameState)
+	return self:IsUsable(gameState) and not self.OrlanStrike.HasSealOfRighteousness;
 end;
 
 OrlanStrike.CleanseButton = OrlanStrike.Button:CloneTo(
@@ -1149,14 +1173,14 @@ OrlanStrike.CleanseButton = OrlanStrike.Button:CloneTo(
 	Target = "player"
 });
 
-function OrlanStrike.CleanseButton:IsReasonable(holyPower, time)
-	return self:IsUsable(holyPower, time) and self.OrlanStrike.HasDispellableDebuff;
+function OrlanStrike.CleanseButton:IsReasonable(gameState)
+	return self:IsUsable(gameState) and self.OrlanStrike.HasDispellableDebuff;
 end;
 
-function OrlanStrike.CleanseButton:UpdateDisplay(window, holyPower)
-	self.OrlanStrike.Button.UpdateDisplay(self, window, holyPower);
+function OrlanStrike.CleanseButton:UpdateDisplay(window, gameState)
+	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self.IsAvailable and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
+	if self.IsAvailable and self:IsReasonable(gameState) then
 		self.OrlanStrike:SetBorderColor(window, 1, 0, 1, 1);
 		window:SetAlpha(1);
 	end;
@@ -1168,13 +1192,13 @@ OrlanStrike.WordOfGloryButton = OrlanStrike.HolyPowerButton:CloneTo(
 	Target = "player"
 });
 
-function OrlanStrike.WordOfGloryButton:IsReasonable(holyPower, time)
+function OrlanStrike.WordOfGloryButton:IsReasonable(gameState)
 	return (self.OrlanStrike.HealthPercent <= 0.4) and
-		self.OrlanStrike.HolyPowerButton.IsReasonable(self, holyPower, time);
+		self.OrlanStrike.HolyPowerButton.IsReasonable(self, gameState);
 end;
 
-function OrlanStrike.WordOfGloryButton:IsVeryReasonable(holyPower, time)
-	return (self.OrlanStrike.HealthPercent <= 0.2) and self:IsReasonable(holyPower, time);
+function OrlanStrike.WordOfGloryButton:IsVeryReasonable(gameState)
+	return (self.OrlanStrike.HealthPercent <= 0.2) and self:IsReasonable(gameState);
 end;
 
 OrlanStrike.RebukeButton = OrlanStrike.Button:CloneTo(
@@ -1182,15 +1206,17 @@ OrlanStrike.RebukeButton = OrlanStrike.Button:CloneTo(
 	SpellId = 96231 -- Rebuke
 });
 
-function OrlanStrike.RebukeButton:IsReasonable(holyPower, time)
+function OrlanStrike.RebukeButton:IsReasonable(gameState)
 	local spell, _, _, _, _, _, _, _, nonInterruptible = UnitCastingInfo("target");
-	return self.OrlanStrike.Button.IsReasonable(self, holyPower, time) and spell and not nonInterruptible;
+	return self.OrlanStrike.Button.IsReasonable(self, gameState) and 
+		spell and 
+		not nonInterruptible;
 end;
 
-function OrlanStrike.RebukeButton:UpdateDisplay(window, holyPower)
-	self.OrlanStrike.Button.UpdateDisplay(self, window, holyPower);
+function OrlanStrike.RebukeButton:UpdateDisplay(window, gameState)
+	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self.IsAvailable and self:IsReasonable(holyPower, self.OrlanStrike.GcdExpiration) then
+	if self.IsAvailable and self:IsReasonable(gameState) then
 		self.OrlanStrike:SetBorderColor(window, 0.6, 0.3, 0, 1);
 		window:SetAlpha(1);
 	else
@@ -1216,38 +1242,38 @@ function OrlanStrike.VariableButton:UpdateSpells()
 end;
 
 function OrlanStrike.VariableButton:UpdateState()
-	if (self.ActiveChoice) then
+	if self.ActiveChoice then
 		self.ActiveChoice:UpdateState();
 	end;
 end;
 
-function OrlanStrike.VariableButton:IsUsable(holyPower, time)
+function OrlanStrike.VariableButton:IsUsable(gameState)
 	local isUsable;
-	if (self.ActiveChoice) then
-		isUsable = self.ActiveChoice:IsUsable(holyPower, time);
+	if self.ActiveChoice then
+		isUsable = self.ActiveChoice:IsUsable(gameState);
 	end;
 	return isUsable;
 end;
 
-function OrlanStrike.VariableButton:IsReasonable(holyPower, time)
+function OrlanStrike.VariableButton:IsReasonable(gameState)
 	local isReasonable;
-	if (self.ActiveChoice) then
-		isReasonable = self.ActiveChoice:IsReasonable(holyPower, time);
+	if self.ActiveChoice then
+		isReasonable = self.ActiveChoice:IsReasonable(gameState);
 	end;
 	return isReasonable;
 end;
 
-function OrlanStrike.VariableButton:IsVeryReasonable(holyPower, time)
+function OrlanStrike.VariableButton:IsVeryReasonable(gameState)
 	local isVeryReasonable;
-	if (self.ActiveChoice) then
-		isVeryReasonable = self.ActiveChoice:IsVeryReasonable(holyPower, time);
+	if self.ActiveChoice then
+		isVeryReasonable = self.ActiveChoice:IsVeryReasonable(gameState);
 	end;
 	return isVeryReasonable;
 end;
 
-function OrlanStrike.VariableButton:UpdateDisplay(window, holyPower)
-	if (self.ActiveChoice) then
-		self.ActiveChoice:UpdateDisplay(window, holyPower);
+function OrlanStrike.VariableButton:UpdateDisplay(window, gameState)
+	if self.ActiveChoice then
+		self.ActiveChoice:UpdateDisplay(window, gameState);
 	else
 		window:SetAlpha(0);
 	end;
@@ -1255,7 +1281,7 @@ end;
 
 function OrlanStrike.VariableButton:GetSpellId()
 	local spellId;
-	if (self.ActiveChoice) then
+	if self.ActiveChoice then
 		spellId = self.ActiveChoice:GetSpellId();
 	end;
 	return spellId;
@@ -1263,7 +1289,7 @@ end;
 
 function OrlanStrike.VariableButton:GetCooldownExpiration()
 	local cooldownExpiration;
-	if (self.ActiveChoice) then
+	if self.ActiveChoice then
 		cooldownExpiration = self.ActiveChoice:GetCooldownExpiration();
 	end;
 	return cooldownExpiration;
@@ -1271,7 +1297,7 @@ end;
 
 function OrlanStrike.VariableButton:GetSharedCooldownSpellId()
 	local sharedCooldownSpellId;
-	if (self.ActiveChoice) then
+	if self.ActiveChoice then
 		sharedCooldownSpellId = self.ActiveChoice:GetSharedCooldownSpellId();
 	end;
 	return sharedCooldownSpellId;
