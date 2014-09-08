@@ -25,7 +25,6 @@ end;
 function OrlanStrike:Initialize(configName)
 	local orlanStrike = self;
 
-	local _, build = GetBuildInfo();
 	self.ConfigName = configName;
 	self.EventFrame = CreateFrame("Frame");
 	self.ButtonSize = 32;
@@ -972,6 +971,8 @@ function OrlanStrike.Button:GetSpellId()
 end;
 
 function OrlanStrike.Button:UpdateSpells()
+	local _, _, icon = GetSpellInfo(self:GetSpellId());
+	self.Background:SetTexture(icon);
 end;
 
 function OrlanStrike.Button:GetSharedCooldownSpellId()
@@ -979,9 +980,6 @@ function OrlanStrike.Button:GetSharedCooldownSpellId()
 end;
 
 function OrlanStrike.Button:SetupButton()
-	local _, _, icon = GetSpellInfo(self:GetSpellId());
-	self.Background:SetTexture(icon);
-
 	self.Spell:SetAttribute("type", "spell");
 	self.Spell:SetAttribute("spell", self:GetSpellId());
 	if self.Target then
