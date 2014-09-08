@@ -891,7 +891,7 @@ function OrlanStrike:UpdateButtonCooldown(button)
 			if (duration ~= 0) and (expirationTime ~= 0) then
 				button.Cooldown:SetCooldown(expirationTime - duration, duration);
 			else
-				button.Cooldown:SetCooldown(0, 10);
+				button.Cooldown:SetCooldown(GetTime() - 20, 10);
 			end;
 		end;
 	end;
@@ -1065,6 +1065,11 @@ function OrlanStrike.SealButton:UpdateDisplay(window, gameState)
 end;
 
 OrlanStrike.HolyPowerButton = OrlanStrike.Button:CloneTo({});
+
+function OrlanStrike.HolyPowerButton:IsUsable(gameState)
+	return self.OrlanStrike.Button.IsUsable(self, gameState) and 
+		((gameState.HolyPower > 0) or gameState:HasDivinePurpose());
+end;
 
 function OrlanStrike.HolyPowerButton:UpdateGameState(gameState)
 	self.OrlanStrike.Button.UpdateGameState(self, gameState);
