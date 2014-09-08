@@ -1162,8 +1162,8 @@ OrlanStrike.CleanseButton = OrlanStrike.Button:CloneTo(
 	Target = "player"
 });
 
-function OrlanStrike.CleanseButton:IsReasonable(gameState)
-	return self:IsUsable(gameState) and self.OrlanStrike.HasDispellableDebuff;
+function OrlanStrike.CleanseButton:IsUsable(gameState)
+	return OrlanStrike.Button.IsUsable(self, gameState) and self.OrlanStrike.HasDispellableDebuff;
 end;
 
 function OrlanStrike.CleanseButton:UpdateDisplay(window, gameState)
