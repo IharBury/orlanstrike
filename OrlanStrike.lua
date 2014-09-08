@@ -539,6 +539,8 @@ function OrlanStrike:Hide()
 end;
 
 function OrlanStrike:HandleAbilityUse(spellId)
+	self:DetectGcd();
+
 	local gameState = self:GetCurrentGameState();
 	for spellIndex = 1, self.SpellCount do
 		local button = self.CastWindow.Buttons[spellIndex];
@@ -617,23 +619,18 @@ function OrlanStrike:DetectThreat()
 	self.IsTanking, _, self.ThreatPercent, self.RawThreatPercent, self.Threat = UnitDetailedThreatSituation("player", "target");
 end;
 
-function OrlanStrike:DetectNow()
-	self.Now = GetTime();
-end;
-
-function OrlanStrike:GetRawCooldownExpiration(spellId)
+function OrlanStrike:GetRawCooldownExpiration(start, duration, enabled)
 	local expiration;
-	local start, duration = GetSpellCooldown(GetSpellInfo(spellId));
-	if start and duration and (duration ~= 0) and (start + duration > self.Now) then
+	if start and duration and (duration ~= 0) and (start + duration > GetTime()) then
 		expiration = start + duration;
 	else
-		expiration = self.Now;
+		expiration = GetTime();
 	end;
 	return expiration;
 end;
 
-function OrlanStrike:GetCooldownExpiration(spellId)
-	local expiration = self:GetRawCooldownExpiration(spellId);
+function OrlanStrike:GetCooldownExpiration(start, duration, enabled)
+	local expiration = self:GetRawCooldownExpiration(start, duration, enabled);
 	if expiration < self.GcdExpiration then
 		expiration = self.GcdExpiration;
 	end;
@@ -641,7 +638,8 @@ function OrlanStrike:GetCooldownExpiration(spellId)
 end;
 
 function OrlanStrike:DetectGcd()
-	self.GcdExpiration = self:GetRawCooldownExpiration(20154); -- Seal of Righteousness
+	local start, duration, enabled = GetSpellCooldown(20154); -- Seal of Righteousness
+	self.GcdExpiration = self:GetRawCooldownExpiration(start, duration, enabled);
 end;
 
 function OrlanStrike:UpdateHolyPowerBar()
@@ -733,7 +731,6 @@ function OrlanStrike:GetCurrentGameState()
 end;
 
 function OrlanStrike:UpdateStatus()
-	self:DetectNow();
 	self:DetectAuras();
 	self:DetectHealthPercent();
 	self:DetectManaPercent();
@@ -749,7 +746,6 @@ function OrlanStrike:UpdateStatus()
 	for spellIndex = 1, self.SpellCount do
 		local button = self.CastWindow.Buttons[spellIndex];
 		if button then
-			button:UpdateState();
 			button:UpdateDisplay(button, self:GetCurrentGameState());
 		end;
 	end;
@@ -931,14 +927,27 @@ function OrlanStrike.Button:GetCooldown()
 	return GetSpellCooldown(GetSpellInfo(self:GetSpellId()));
 end;
 
-function OrlanStrike.Button:UpdateState()
-	self.IsLearned = IsSpellKnown(self:GetSpellId());
-	self.IsAvailable = self.IsLearned and IsUsableSpell(self:GetSpellId());
-	self.CooldownExpiration = self.OrlanStrike:GetCooldownExpiration(self:GetSpellId());
+function OrlanStrike.Button:IsLearned()
+	return IsSpellKnown(self:GetSpellId());
+end;
+
+function OrlanStrike.Button:IsAvailable()
+	local isUsable, isLackingResources = IsUsableSpell(GetSpellInfo(self:GetSpellId()));
+	return self:IsLearned() and (isUsable or isLackingResources);
+end;
+
+function OrlanStrike.Button:IsLackingMana()
+	local _, isLackingResources = IsUsableSpell(self:GetSpellId());
+	return self:IsAvailable() and isLackingResources;
+end;
+
+function OrlanStrike.Button:GetCooldownExpiration()
+	local start, duration, enable = self:GetCooldown();
+	return self.OrlanStrike:GetCooldownExpiration(start, duration, enable);
 end;
 
 function OrlanStrike.Button:IsUsable(gameState)
-	return self.IsAvailable and (self:GetCooldownExpiration() <= gameState.Time);
+	return self:IsAvailable() and (self:GetCooldownExpiration() <= gameState.Time);
 end;
 
 function OrlanStrike.Button:IsReasonable(gameState)
@@ -953,17 +962,13 @@ function OrlanStrike.Button:UpdateDisplay(window, gameState)
 	window:SetAlpha(0.5);
 	self.OrlanStrike:SetBorderColor(window, 0, 0, 0, 0);
 
-	if not self.IsAvailable then
+	if not self:IsAvailable() then
 		window:SetAlpha(0.1);
 	end;
 end;
 
 function OrlanStrike.Button:GetSpellId()
 	return self.SpellId;
-end;
-
-function OrlanStrike.Button:GetCooldownExpiration()
-	return self.CooldownExpiration;
 end;
 
 function OrlanStrike.Button:UpdateSpells()
@@ -1006,12 +1011,6 @@ OrlanStrike.ExorcismButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 	SpellId = 879 -- Exorcism
 });
 
-function OrlanStrike.ExorcismButton:UpdateState()
-	self.OrlanStrike.Button.UpdateState(self);
-
-	self.CooldownExpiration = math.max(self.CooldownExpiration, self.OrlanStrike:GetCooldownExpiration(122032)); -- Exorcism with Glyph of Mass Exorcism
-end;
-
 function OrlanStrike.ExorcismButton:GetCooldown()
 	local start1, duration1, enable1 = GetSpellCooldown(GetSpellInfo(self:GetSpellId()));
 	local start2, duration2, enable2 = GetSpellCooldown(GetSpellInfo(122032)); -- Exorcism with Glyph of Mass Exorcism
@@ -1033,7 +1032,7 @@ OrlanStrike.BurstButton = OrlanStrike.Button:CloneTo({});
 function OrlanStrike.BurstButton:UpdateDisplay(window, gameState)
 	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self.IsAvailable and self:IsReasonable(gameState) then
+	if self:IsReasonable(gameState) then
 		window:SetAlpha(1);
 		self.OrlanStrike:SetBorderColor(window, 1, 1, 1, 1);
 	end;
@@ -1043,14 +1042,6 @@ OrlanStrike.WeaponsOfTheLightButton = OrlanStrike.BurstButton:CloneTo(
 {
 	SpellId = 175699
 });
-
-function OrlanStrike.WeaponsOfTheLightButton:UpdateState()
-	self.OrlanStrike.Button.UpdateState(self);
-	self.IsAvailable = self.IsLearned and 
-		(IsUsableSpell(114165) or -- Holy Prism
-			IsUsableSpell(114158) or -- Light's Hammer
-			IsUsableSpell(114157)); -- Execution Sentence
-end;
 
 function OrlanStrike.WeaponsOfTheLightButton:SetupButton()
 	local _, _, icon = GetSpellInfo(self:GetSpellId());
@@ -1068,7 +1059,7 @@ OrlanStrike.SealButton = OrlanStrike.Button:CloneTo({});
 function OrlanStrike.SealButton:UpdateDisplay(window, gameState)
 	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self.IsAvailable and self:IsReasonable(gameState) then
+	if self:IsReasonable(gameState) then
 		self.OrlanStrike:SetBorderColor(window, 0.2, 0.2, 1, 1);
 	else
 		window:SetAlpha(0.1);
@@ -1131,12 +1122,6 @@ OrlanStrike.LayOnHandsButton = OrlanStrike.HealthButton:CloneTo(
 	Target = "player"
 });
 
-function OrlanStrike.LayOnHandsButton:UpdateStatus()
-	self.OrlanStrike.Button.UpdateState(self);
-
-	self.IsAvailable = self.IsAvailable and not self.OrlanStrike.HasForbearance;
-end;
-
 OrlanStrike.SealOfTruthButton = OrlanStrike.SealButton:CloneTo(
 {
 	SpellId = 105361
@@ -1168,7 +1153,7 @@ end;
 function OrlanStrike.CleanseButton:UpdateDisplay(window, gameState)
 	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self.IsAvailable and self:IsReasonable(gameState) then
+	if self:IsReasonable(gameState) then
 		self.OrlanStrike:SetBorderColor(window, 1, 0, 1, 1);
 		window:SetAlpha(1);
 	end;
@@ -1204,7 +1189,7 @@ end;
 function OrlanStrike.RebukeButton:UpdateDisplay(window, gameState)
 	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self.IsAvailable and self:IsReasonable(gameState) then
+	if self:IsReasonable(gameState) then
 		self.OrlanStrike:SetBorderColor(window, 0.6, 0.3, 0, 1);
 		window:SetAlpha(1);
 	else
@@ -1229,34 +1214,25 @@ function OrlanStrike.VariableButton:UpdateSpells()
 	self:SetupButton();
 end;
 
-function OrlanStrike.VariableButton:UpdateState()
-	if self.ActiveChoice then
-		self.ActiveChoice:UpdateState();
-	end;
-end;
-
 function OrlanStrike.VariableButton:IsUsable(gameState)
-	local isUsable;
 	if self.ActiveChoice then
-		isUsable = self.ActiveChoice:IsUsable(gameState);
+		return self.ActiveChoice:IsUsable(gameState);
 	end;
-	return isUsable;
+	return false;
 end;
 
 function OrlanStrike.VariableButton:IsReasonable(gameState)
-	local isReasonable;
 	if self.ActiveChoice then
-		isReasonable = self.ActiveChoice:IsReasonable(gameState);
+		return self.ActiveChoice:IsReasonable(gameState);
 	end;
-	return isReasonable;
+	return false;
 end;
 
 function OrlanStrike.VariableButton:IsVeryReasonable(gameState)
-	local isVeryReasonable;
 	if self.ActiveChoice then
-		isVeryReasonable = self.ActiveChoice:IsVeryReasonable(gameState);
+		return self.ActiveChoice:IsVeryReasonable(gameState);
 	end;
-	return isVeryReasonable;
+	return false;
 end;
 
 function OrlanStrike.VariableButton:UpdateDisplay(window, gameState)
@@ -1268,27 +1244,44 @@ function OrlanStrike.VariableButton:UpdateDisplay(window, gameState)
 end;
 
 function OrlanStrike.VariableButton:GetSpellId()
-	local spellId;
 	if self.ActiveChoice then
-		spellId = self.ActiveChoice:GetSpellId();
+		return self.ActiveChoice:GetSpellId();
 	end;
-	return spellId;
+	return nil;
+end;
+
+function OrlanStrike.VariableButton:IsLearned()
+	if self.ActiveChoice then
+		return self.ActiveChoice:IsLearned();
+	end;
+	return false;
+end;
+
+function OrlanStrike.VariableButton:IsAvailable()
+	if self.ActiveChoice then
+		return self.ActiveChoice:IsAvailable();
+	end;
+	return false;
+end;
+
+function OrlanStrike.VariableButton:UpdateGameState(gameState)
+	if self.ActiveChoice then
+		self.ActiveChoice:UpdateGameState(gameState);
+	end;
 end;
 
 function OrlanStrike.VariableButton:GetCooldownExpiration()
-	local cooldownExpiration;
 	if self.ActiveChoice then
-		cooldownExpiration = self.ActiveChoice:GetCooldownExpiration();
+		return self.ActiveChoice:GetCooldownExpiration();
 	end;
-	return cooldownExpiration;
+	return GetTime();
 end;
 
 function OrlanStrike.VariableButton:GetSharedCooldownSpellId()
-	local sharedCooldownSpellId;
 	if self.ActiveChoice then
-		sharedCooldownSpellId = self.ActiveChoice:GetSharedCooldownSpellId();
+		return self.ActiveChoice:GetSharedCooldownSpellId();
 	end;
-	return sharedCooldownSpellId;
+	return nil;
 end;
 
 OrlanStrike:Initialize("OrlanStrikeConfig");
