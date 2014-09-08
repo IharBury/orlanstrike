@@ -66,7 +66,7 @@ function OrlanStrike:Initialize(configName)
 	{
 		{
 			SpellId = 85256, -- Templar's Verdict
-			VeryReasonable = true
+			MinReason = 2
 		},
 		{
 			SpellId = 879 -- Exorcism
@@ -85,11 +85,11 @@ function OrlanStrike:Initialize(configName)
 	{
 		{
 			SpellId = 53385, -- Divine Storm
-			VeryReasonable = true
+			MinReason = 2
 		},
 		{
 			SpellId = 85256, -- Templar's Verdict
-			VeryReasonable = true
+			MinReason = 2
 		},
 		{
 			SpellId = 879 -- Exorcism
@@ -498,7 +498,7 @@ function OrlanStrike:CalculateSpellPriorityIndexes(priorities)
 				{
 					SpellId = priority.SpellId,
 					Index = orlanStrike:CalculateSpellIndex(priority.SpellId),
-					VeryReasonable = priority.VeryReasonable
+					MinReason = priority.MinReason or 1
 				};
 		end);
 	return indexes;
@@ -786,9 +786,7 @@ end;
 
 function OrlanStrike:IsPrioritySpell(priorityIndex, gameState)
 	local button = self.CastWindow.Buttons[priorityIndex.Index];
-	return button and
-		(button:IsVeryReasonable(gameState) or
-			(not priorityIndex.VeryReasonable and button:IsReasonable(gameState)));
+	return button and (button:GetReason(gameState) >= priorityIndex.MinReason);
 end;
 
 function OrlanStrike:GetSpellsToCast(priorityIndexes)
@@ -948,12 +946,11 @@ function OrlanStrike.Button:IsUsable(gameState)
 		not self:IsLackingMana();
 end;
 
-function OrlanStrike.Button:IsReasonable(gameState)
-	return self:IsUsable(gameState);
-end;
-
-function OrlanStrike.Button:IsVeryReasonable(gameState)
-	return false;
+function OrlanStrike.Button:GetReason(gameState)
+	if (self:IsUsable(gameState)) then
+		return 1;
+	end;
+	return 0;
 end;
 
 function OrlanStrike.Button:UpdateDisplay(window, gameState)
@@ -1029,7 +1026,7 @@ OrlanStrike.BurstButton = OrlanStrike.Button:CloneTo({});
 function OrlanStrike.BurstButton:UpdateDisplay(window, gameState)
 	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self:IsReasonable(gameState) then
+	if self:GetReason(gameState) > 0 then
 		window:SetAlpha(1);
 		self.OrlanStrike:SetBorderColor(window, 1, 1, 1, 1);
 	end;
@@ -1066,7 +1063,7 @@ OrlanStrike.SealButton = OrlanStrike.Button:CloneTo({});
 function OrlanStrike.SealButton:UpdateDisplay(window, gameState)
 	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self:IsReasonable(gameState) then
+	if self:GetReason(gameState) > 0 then
 		self.OrlanStrike:SetBorderColor(window, 0.2, 0.2, 1, 1);
 	else
 		window:SetAlpha(0.1);
@@ -1096,14 +1093,15 @@ function OrlanStrike.HolyPowerButton:UpdateGameState(gameState)
 	end;
 end;
 
-function OrlanStrike.HolyPowerButton:IsReasonable(gameState)
-	return ((gameState.HolyPower >= 3) or gameState:HasDivinePurpose()) and 
-		self.OrlanStrike.Button.IsReasonable(self, gameState);
-end;
-
-function OrlanStrike.HolyPowerButton:IsVeryReasonable(gameState)
-	return self:IsReasonable(gameState) and
-		(gameState.HolyPower == UnitPowerMax("player", SPELL_POWER_HOLY_POWER) or gameState:HasDivinePurpose());
+function OrlanStrike.HolyPowerButton:GetReason(gameState)
+	if self.OrlanStrike.Button.GetReason(self, gameState) == 0 then
+		return 0;
+	elseif (gameState.HolyPower == UnitPowerMax("player", SPELL_POWER_HOLY_POWER)) or gameState:HasDivinePurpose() then
+		return 2;
+	elseif gameState.HolyPower >= 3 then
+		return 1;
+	end;
+	return 0;
 end;
 
 OrlanStrike.ThreeHolyPowerButton = OrlanStrike.HolyPowerButton:CloneTo({});
@@ -1120,16 +1118,22 @@ function OrlanStrike.SeraphimButton:IsUsable(gameState)
 		OrlanStrike.Button.IsUsable(self, gameState);
 end;
 
-function OrlanStrike.SeraphimButton:IsReasonable(gameState)
-	return (gameState.HolyPower >= 5) and 
-		self.OrlanStrike.HolyPowerButton.IsReasonable(self, gameState); -- ...
+function OrlanStrike.SeraphimButton:GetReason(gameState)
+	if (gameState.HolyPower >= 5) and 
+			(self.OrlanStrike.HolyPowerButton.GetReason(self, gameState) > 0) then
+		return 1;
+	end;
+	return 0;
 end;
 
 OrlanStrike.HealthButton = OrlanStrike.Button:CloneTo({});
 
-function OrlanStrike.HealthButton:IsReasonable(gameState)
-	return (self.OrlanStrike.HealthPercent <= 0.2) and 
-		self.OrlanStrike.Button.IsReasonable(self, gameState);
+function OrlanStrike.HealthButton:GetReason(gameState)
+	if (self.OrlanStrike.HealthPercent <= 0.2) and 
+		(self.OrlanStrike.Button.GetReason(self, gameState) > 0) then
+		return 1;
+	end;
+	return 0;
 end;
 
 OrlanStrike.LayOnHandsButton = OrlanStrike.HealthButton:CloneTo(
@@ -1143,8 +1147,11 @@ OrlanStrike.SealOfTruthButton = OrlanStrike.SealButton:CloneTo(
 	SpellId = 105361
 });
 
-function OrlanStrike.SealOfTruthButton:IsReasonable(gameState)
-	return self:IsUsable(gameState) and not self.OrlanStrike.HasSealOfTruth;
+function OrlanStrike.SealOfTruthButton:GetReason(gameState)
+	if (OrlanStrike.SealButton.GetReason(self, gameState) > 0) and not self.OrlanStrike.HasSealOfTruth then
+		return 1;
+	end;
+	return 0;
 end;
 
 OrlanStrike.SealOfRighteousnessButton = OrlanStrike.SealButton:CloneTo(
@@ -1152,8 +1159,11 @@ OrlanStrike.SealOfRighteousnessButton = OrlanStrike.SealButton:CloneTo(
 	SpellId = 20154
 });
 
-function OrlanStrike.SealOfRighteousnessButton:IsReasonable(gameState)
-	return self:IsUsable(gameState) and not self.OrlanStrike.HasSealOfRighteousness;
+function OrlanStrike.SealOfRighteousnessButton:GetReason(gameState)
+	if (OrlanStrike.SealButton.GetReason(self, gameState) > 0) and not self.OrlanStrike.HasSealOfRighteousness then
+		return 1;
+	end;
+	return 0;
 end;
 
 OrlanStrike.CleanseButton = OrlanStrike.Button:CloneTo(
@@ -1169,7 +1179,7 @@ end;
 function OrlanStrike.CleanseButton:UpdateDisplay(window, gameState)
 	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self:IsReasonable(gameState) then
+	if self:GetReason(gameState) > 0 then
 		self.OrlanStrike:SetBorderColor(window, 1, 0, 1, 1);
 		window:SetAlpha(1);
 	end;
@@ -1181,13 +1191,15 @@ OrlanStrike.WordOfGloryButton = OrlanStrike.HolyPowerButton:CloneTo(
 	Target = "player"
 });
 
-function OrlanStrike.WordOfGloryButton:IsReasonable(gameState)
-	return (self.OrlanStrike.HealthPercent <= 0.4) and
-		self.OrlanStrike.HolyPowerButton.IsReasonable(self, gameState);
-end;
-
-function OrlanStrike.WordOfGloryButton:IsVeryReasonable(gameState)
-	return (self.OrlanStrike.HealthPercent <= 0.2) and self:IsReasonable(gameState);
+function OrlanStrike.WordOfGloryButton:GetReason(gameState)
+	if self.OrlanStrike.HolyPowerButton.GetReason(self, gameState) == 0 then
+		return 0;
+	elseif self.OrlanStrike.HealthPercent <= 0.2 then
+		return 2;
+	elseif self.OrlanStrike.HealthPercent <= 0.4 then
+		return 1;
+	end;
+	return 0;
 end;
 
 OrlanStrike.RebukeButton = OrlanStrike.Button:CloneTo(
@@ -1195,17 +1207,20 @@ OrlanStrike.RebukeButton = OrlanStrike.Button:CloneTo(
 	SpellId = 96231 -- Rebuke
 });
 
-function OrlanStrike.RebukeButton:IsReasonable(gameState)
+function OrlanStrike.RebukeButton:GetReason(gameState)
 	local spell, _, _, _, _, _, _, _, nonInterruptible = UnitCastingInfo("target");
-	return self.OrlanStrike.Button.IsReasonable(self, gameState) and 
+	if (self.OrlanStrike.Button.GetReason(self, gameState) > 0) and 
 		spell and 
-		not nonInterruptible;
+		not nonInterruptible then
+		return 1;
+	end;
+	return 0;
 end;
 
 function OrlanStrike.RebukeButton:UpdateDisplay(window, gameState)
 	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
-	if self:IsReasonable(gameState) then
+	if self:GetReason(gameState) > 0 then
 		self.OrlanStrike:SetBorderColor(window, 0.6, 0.3, 0, 1);
 		window:SetAlpha(1);
 	else
@@ -1237,18 +1252,11 @@ function OrlanStrike.VariableButton:IsUsable(gameState)
 	return false;
 end;
 
-function OrlanStrike.VariableButton:IsReasonable(gameState)
+function OrlanStrike.VariableButton:GetReason(gameState)
 	if self.ActiveChoice then
-		return self.ActiveChoice:IsReasonable(gameState);
+		return self.ActiveChoice:GetReason(gameState);
 	end;
-	return false;
-end;
-
-function OrlanStrike.VariableButton:IsVeryReasonable(gameState)
-	if self.ActiveChoice then
-		return self.ActiveChoice:IsVeryReasonable(gameState);
-	end;
-	return false;
+	return 0;
 end;
 
 function OrlanStrike.VariableButton:UpdateDisplay(window, gameState)
