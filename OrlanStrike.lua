@@ -65,10 +65,6 @@ function OrlanStrike:Initialize(configName)
 	self.SingleTargetPriorities =
 	{
 		{
-			SpellId = 20271, -- Judgement
-			VeryReasonable = true
-		},
-		{
 			SpellId = 85256, -- Templar's Verdict
 			VeryReasonable = true
 		},
@@ -87,10 +83,6 @@ function OrlanStrike:Initialize(configName)
 	};
 	self.MultiTargetPriorities =
 	{
-		{
-			SpellId = 20271, -- Judgement
-			VeryReasonable = true
-		},
 		{
 			SpellId = 53385, -- Divine Storm
 			VeryReasonable = true
@@ -507,6 +499,7 @@ function OrlanStrike:CalculateSpellPriorityIndexes(priorities)
 		function (index, priority)
 			indexes[index] = 
 				{
+					SpellId = priority.SpellId,
 					Index = orlanStrike:CalculateSpellIndex(priority.SpellId),
 					VeryReasonable = priority.VeryReasonable
 				};
@@ -804,7 +797,6 @@ end;
 function OrlanStrike:GetSpellsToCast(priorityIndexes)
 	local minCooldownExpiration;
 	local firstSpellIndex;
-	local firstSpellId;
 	local sharedCooldownSpellId;
 	local index = 1;
 	local gameState = self:GetCurrentGameState();
@@ -812,13 +804,16 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 		local priorityIndex = priorityIndexes[index];
 		local spellIndex = priorityIndex.Index;
 		local button = self.CastWindow.Buttons[spellIndex];
-		if button and self:IsPrioritySpell(priorityIndex, gameState) then
+		if button and (button:GetSpellId() == priorityIndex.SpellId) then
+			local cooldownExpiration = button:GetCooldownExpiration();
 			if (not minCooldownExpiration) or 
-					(minCooldownExpiration - self.MaxAbilityWaitTime > button:GetCooldownExpiration()) then
-				minCooldownExpiration = button:GetCooldownExpiration();
-				firstSpellIndex = spellIndex;
-				firstSpellId = button:GetSpellId();
-				sharedCooldownSpellId = button:GetSharedCooldownSpellId();
+					(minCooldownExpiration - self.MaxAbilityWaitTime > cooldownExpiration) then
+				gameState.Time = cooldownExpiration;
+				if self:IsPrioritySpell(priorityIndex, gameState) then
+					minCooldownExpiration = cooldownExpiration;
+					firstSpellIndex = spellIndex;
+					sharedCooldownSpellId = button:GetSharedCooldownSpellId();
+				end;
 			end;
 		end;
 
@@ -856,12 +851,17 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 			local priorityIndex = priorityIndexes[index];
 			local spellIndex = priorityIndex.Index;
 			local button = self.CastWindow.Buttons[spellIndex];
-			if self:IsPrioritySpell(priorityIndex, nextGameState) then
+
+			if button and (button:GetSpellId() == priorityIndex.SpellId) then
+				local cooldownExpiration = button:GetCooldownExpiration();
 				if (not nextMinCooldownExpiration) or 
 						(nextMinCooldownExpiration - self.MaxAbilityWaitTime > 
 							nextSpellCooldownExpirations[spellIndex]) then
-					nextMinCooldownExpiration = nextSpellCooldownExpirations[spellIndex];
-					nextSpellIndex = spellIndex;
+					nextGameState.Time = nextSpellCooldownExpirations[spellIndex];
+					if self:IsPrioritySpell(priorityIndex, nextGameState) then
+						nextMinCooldownExpiration = nextSpellCooldownExpirations[spellIndex];
+						nextSpellIndex = spellIndex;
+					end;
 				end;
 			end;
 
