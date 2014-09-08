@@ -84,6 +84,10 @@ function OrlanStrike:Initialize(configName)
 	self.MultiTargetPriorities =
 	{
 		{
+			SpellId = 85256, -- Templar's Verdict
+			MinReason = 3
+		},
+		{
 			SpellId = 53385, -- Divine Storm
 			MinReason = 2
 		},
@@ -158,9 +162,8 @@ function OrlanStrike:CreateCastWindow()
 	{
 		self:CreateButton(
 			castWindow, 
-			self.ThreeHolyPowerButton:CloneTo(
+			self.TemplarsVerdictButton:CloneTo(
 			{
-				SpellId = 85256, -- Templar's Verdict
 				Row = 0,
 				Column = 1
 			})),
@@ -168,7 +171,6 @@ function OrlanStrike:CreateCastWindow()
 			castWindow,
 			self.ExorcismButton:CloneTo(
 			{
-				OrlanStrike = self,
 				Row = 0,
 				Column = 2,
 			})),
@@ -191,9 +193,8 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.ThreeHolyPowerButton:CloneTo(
+			self.DivineStormButton:CloneTo(
 			{
-				SpellId = 53385, -- Divine Storm
 				Row = 1,
 				Column = 1
 			})),
@@ -697,17 +698,21 @@ function OrlanStrike:UpdateThreatBar()
 end;
 
 function OrlanStrike:GetCurrentGameState()
-	local divinePurposeSpellName = GetSpellInfo(90174); -- Divine Purpose
-	local _, _, _, _, _, _, divinePurposeExpirationTime = UnitBuff("player", divinePurposeSpellName);
+	local _;
 
 	local gameState =
 	{
 		HolyPower = UnitPower("player", SPELL_POWER_HOLY_POWER), 
-		DivinePurposeExpirationTime = divinePurposeExpirationTime,
 		Time = self.GcdExpiration,
+		DivinePurposeExpirationTime = select(7, UnitBuff("player", GetSpellInfo(90174))),
 		HasDivinePurpose = function(self)
 			return self.DivinePurposeExpirationTime and
 				self.DivinePurposeExpirationTime > self.Time;
+		end,
+		FinalVerdictExpirationTime = select(7, UnitBuff("player", GetSpellInfo(157048))),
+		HasFinalVerdict = function(self)
+			return self.FinalVerdictExpirationTime and
+				self.FinalVerdictExpirationTime > self.Time;
 		end
 	};
 
@@ -1109,6 +1114,48 @@ OrlanStrike.ThreeHolyPowerButton = OrlanStrike.HolyPowerButton:CloneTo({});
 function OrlanStrike.ThreeHolyPowerButton:IsUsable(gameState)
 	return ((gameState.HolyPower >= 3) or gameState:HasDivinePurpose()) and 
 		OrlanStrike.Button.IsUsable(self, gameState);
+end;
+
+OrlanStrike.TemplarsVerdictButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
+{
+	SpellId = 85256
+});
+
+function OrlanStrike.TemplarsVerdictButton:IsFinalVerdictKnown()
+	return select(4, GetTalentInfo(7, 3, GetActiveSpecGroup()));
+end;
+
+function OrlanStrike.TemplarsVerdictButton:UpdateGameState(gameState)
+	OrlanStrike.ThreeHolyPowerButton.UpdateGameState(self, gameState);
+	if self:IsFinalVerdictKnown() then
+		gameState.FinalVerdictExpirationTime = gameState.Time + 30;
+	end;
+end;
+
+function OrlanStrike.TemplarsVerdictButton:GetReason(gameState)
+	local baseReason = OrlanStrike.ThreeHolyPowerButton.GetReason(self, gameState);
+	if (baseReason == 2) and self:IsFinalVerdictKnown() and not gameState:HasFinalVerdict() then
+		return 3;
+	end;
+	return baseReason;
+end;
+
+OrlanStrike.DivineStormButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
+{
+	SpellId = 53385
+});
+
+function OrlanStrike.DivineStormButton:UpdateGameState(gameState)
+	OrlanStrike.ThreeHolyPowerButton.UpdateGameState(self, gameState);
+	gameState.FinalVerdictExpirationTime = nil;
+end;
+
+function OrlanStrike.DivineStormButton:GetReason(gameState)
+	local baseReason = OrlanStrike.ThreeHolyPowerButton.GetReason(self, gameState);
+	if (baseReason == 2) and gameState:HasFinalVerdict() then
+		return 3;
+	end;
+	return baseReason;
 end;
 
 OrlanStrike.SeraphimButton = OrlanStrike.HolyPowerButton:CloneTo({});
