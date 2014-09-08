@@ -216,17 +216,15 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.BurstButton:CloneTo(
+			self.HolyAvengerButton:CloneTo(
 			{
-				SpellId = 105809, -- Holy Avenger
 				Row = 2,
 				Column = 0
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.BurstButton:CloneTo(
+			self.AvengingWrathButton:CloneTo(
 			{
-				SpellId = 31884, -- Avenging Wrath
 				Row = 2,
 				Column = 1
 			})),
@@ -334,8 +332,7 @@ function OrlanStrike:CreateCastWindow()
 			self.WeaponsOfTheLightButton:CloneTo(
 			{
 				Row = 1,
-				Column = 0,
-				SpellId = 175699 -- Weapons of the Light
+				Column = 0
 			}))
 	};
 	self.SpellCount = 25;
@@ -936,7 +933,7 @@ function OrlanStrike.Button:IsAvailable()
 end;
 
 function OrlanStrike.Button:IsLackingMana()
-	local _, isLackingResources = IsUsableSpell(self:GetSpellId());
+	local _, isLackingResources = IsUsableSpell(GetSpellInfo(self:GetSpellId()));
 	return self:IsAvailable() and isLackingResources;
 end;
 
@@ -946,7 +943,9 @@ function OrlanStrike.Button:GetCooldownExpiration()
 end;
 
 function OrlanStrike.Button:IsUsable(gameState)
-	return self:IsAvailable() and (self:GetCooldownExpiration() <= gameState.Time);
+	return self:IsAvailable() and 
+		(self:GetCooldownExpiration() <= gameState.Time) and
+		not self:IsLackingMana();
 end;
 
 function OrlanStrike.Button:IsReasonable(gameState)
@@ -961,7 +960,7 @@ function OrlanStrike.Button:UpdateDisplay(window, gameState)
 	window:SetAlpha(0.5);
 	self.OrlanStrike:SetBorderColor(window, 0, 0, 0, 0);
 
-	if not self:IsAvailable() then
+	if not self:IsUsable(gameState) then
 		window:SetAlpha(0.1);
 	end;
 end;
@@ -1036,6 +1035,16 @@ function OrlanStrike.BurstButton:UpdateDisplay(window, gameState)
 	end;
 end;
 
+OrlanStrike.HolyAvengerButton = OrlanStrike.BurstButton:CloneTo(
+{
+	SpellId = 105809
+});
+
+OrlanStrike.AvengingWrathButton = OrlanStrike.BurstButton:CloneTo(
+{
+	SpellId = 31884
+});
+
 OrlanStrike.WeaponsOfTheLightButton = OrlanStrike.BurstButton:CloneTo(
 {
 	SpellId = 175699
@@ -1065,6 +1074,10 @@ function OrlanStrike.SealButton:UpdateDisplay(window, gameState)
 end;
 
 OrlanStrike.HolyPowerButton = OrlanStrike.Button:CloneTo({});
+
+function OrlanStrike.HolyPowerButton:IsLackingMana()
+	return false;
+end;
 
 function OrlanStrike.HolyPowerButton:IsUsable(gameState)
 	return self.OrlanStrike.Button.IsUsable(self, gameState) and 
@@ -1256,6 +1269,13 @@ end;
 function OrlanStrike.VariableButton:IsLearned()
 	if self.ActiveChoice then
 		return self.ActiveChoice:IsLearned();
+	end;
+	return false;
+end;
+
+function OrlanStrike.VariableButton:IsLackingMana()
+	if self.ActiveChoice then
+		return self.ActiveChoice:IsLackingMana();
 	end;
 	return false;
 end;
