@@ -57,13 +57,29 @@ function OrlanStrike:Initialize(configName)
 	self.HolyPowerGenerators =
 	{
 		[879] = true, -- Exorcism
-		[20271] = true, -- Judgement
+		[20271] = true, -- Judgment
 		[23275] = true, -- Hammer of Wrath
 		[35395] = true, -- Crusader Strike
 		[53595] = true -- Hammer of the Righteous
 	};
 	self.SingleTargetPriorities =
 	{
+		{
+			SpellId = 20271, -- Judgment
+			MinReason = 2
+		},
+		{
+			SpellId = 105361, -- Seal of Command
+			MinReason = 3
+		},
+		{
+			SpellId = 20154, -- Seal of Righteousness
+			MinReason = 3
+		},
+		{
+			SpellId = 105361, -- Seal of Command
+			MinReason = 2
+		},
 		{
 			SpellId = 152262 -- Seraphim
 		},
@@ -85,11 +101,27 @@ function OrlanStrike:Initialize(configName)
 			SpellId = 35395 -- Crusader Strike
 		},
 		{
-			SpellId = 20271 -- Judgement
+			SpellId = 20271 -- Judgment
 		}
 	};
 	self.MultiTargetPriorities =
 	{
+		{
+			SpellId = 20271, -- Judgment
+			MinReason = 2
+		},
+		{
+			SpellId = 20154, -- Seal of Righteousness
+			MinReason = 3
+		},
+		{
+			SpellId = 105361, -- Seal of Command
+			MinReason = 3
+		},
+		{
+			SpellId = 20154, -- Seal of Righteousness
+			MinReason = 2
+		},
 		{
 			SpellId = 152262 -- Seraphim
 		},
@@ -122,7 +154,7 @@ function OrlanStrike:Initialize(configName)
 			SpellId = 35395 -- Crusader Strike
 		},
 		{
-			SpellId = 20271 -- Judgement
+			SpellId = 20271 -- Judgment
 		}
 	};
 	self.MaxAbilityWaitTime = 0.1;
@@ -145,6 +177,10 @@ function OrlanStrike:Initialize(configName)
 		},
 		{
 			SpellId = 20925, -- Sacred Shield
+			Target = "player"
+		},
+		{
+			SpellId = 175699, -- Weapons of the Light
 			Target = "player"
 		}
 	};
@@ -203,9 +239,8 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.HolyPowerGeneratorButton:CloneTo(
+			self.JudgmentButton:CloneTo(
 			{
-				SpellId = 20271, -- Judgement
 				Row = 0,
 				Column = 4
 			})),
@@ -345,6 +380,13 @@ function OrlanStrike:CreateCastWindow()
 			{
 				Row = 1,
 				Column = 0
+			})),
+		self:CreateButton(
+			castWindow,
+			self.SelfWeaponsOfTheLightButton:CloneTo(
+			{
+				Row = 4,
+				Column = 3
 			})),
 		self:CreateButton(
 			castWindow,
@@ -741,7 +783,17 @@ function OrlanStrike:GetCurrentGameState()
 			return self.HolyAvengerExpirationTime and
 				self.HolyAvengerExpirationTime > self.Time;
 		end,
-		HealthPercent = self.HealthPercent
+		HealthPercent = self.HealthPercent,
+		MaraadsTruthExpirationTime = select(7, UnitBuff("player", GetSpellInfo(156990))),
+		HasMaraadsTruth = function(self)
+			return self.MaraadsTruthExpirationTime and
+				self.MaraadsTruthExpirationTime > self.Time;
+		end,
+		LiadrinsRighteousnessExpirationTime = select(7, UnitBuff("player", GetSpellInfo(156989))),
+		HasLiadrinsRighteousness = function(self)
+			return self.LiadrinsRighteousnessExpirationTime and
+				self.LiadrinsRighteousnessExpirationTime > self.Time;
+		end
 	};
 
 	if self.GameStateOverride and (self.GameStateOverrideTimeout > GetTime()) then
@@ -937,6 +989,10 @@ function OrlanStrike:IsAvengingWrathEnding(gameState)
 	return gameState:HasAvengingWrath() and (gameState.AvengingWrathExpirationTime < gameState.Time + 2);
 end;
 
+function OrlanStrike:AreEmpoweredSealsKnown()
+	return select(4, GetTalentInfo(7, 1, GetActiveSpecGroup()));
+end;
+
 function OrlanStrike:HasGlyph(glyphId)
 	for socket = 1, NUM_GLYPH_SLOTS do
 		local _, _, _, currentGlyphId = GetGlyphSocketInfo(socket);
@@ -1060,9 +1116,59 @@ function OrlanStrike.HolyPowerGeneratorButton:UpdateGameState(gameState)
 	end;
 end;
 
+OrlanStrike.JudgmentButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
+{
+	SpellId = 20271
+});
+
+function OrlanStrike.JudgmentButton:GetReason(gameState)
+	if OrlanStrike.HolyPowerGeneratorButton.GetReason(self, gameState) == 0 then
+		return 0;
+	elseif self.OrlanStrike:AreEmpoweredSealsKnown() then
+		if gameState.HasSealOfTruth then
+			if ((not gameState:HasMaraadsTruth()) or 
+				(gameState.MaraadsTruthExpirationTime < gameState.Time + 2)) then
+				return 2;
+			elseif ((not gameState:HasLiadrinsRighteousness()) or 
+					(gameState.LiadrinsRighteousnessExpirationTime < gameState.Time + 2)) and
+				(gameState.MaraadsTruthExpirationTime <= gameState.Time + 12) then
+				return 2;
+			elseif gameState:HasLiadrinsRighteousness() and
+				(gameState.MaraadsTruthExpirationTime - gameState.LiadrinsRighteousnessExpirationTime <= 10) then
+				return 2;
+			end;
+		elseif gameState.HasSealOfRighteousness then
+			if ((not gameState:HasLiadrinsRighteousness()) or 
+				(gameState.LiadrinsRighteousnessExpirationTime < gameState.Time + 2)) then
+				return 2;
+			elseif ((not gameState:HasMaraadsTruth()) or 
+					(gameState.MaraadsTruthExpirationTime < gameState.Time + 2)) and
+				(gameState.LiadrinsRighteousnessExpirationTime <= gameState.Time + 12) then
+				return 2;
+			elseif gameState:HasMaraadsTruth() and
+				(gameState.LiadrinsRighteousnessExpirationTime - gameState.MaraadsTruthExpirationTime <= 10) then
+				return 2;
+			end;
+		end;
+	end;
+	return 1;
+end;
+
+function OrlanStrike.JudgmentButton:UpdateGameState(gameState)
+	OrlanStrike.HolyPowerGeneratorButton.UpdateGameState(self, gameState);
+	if self.OrlanStrike:AreEmpoweredSealsKnown() then
+		if gameState.HasSealOfTruth then
+			gameState.MaraadsTruthExpirationTime = gameState.Time + 20;
+		elseif gameState.HasSealOfRighteousness then
+			gameState.LiadrinsRighteousnessExpirationTime = gameState.Time + 20;
+		end;
+	end;
+end;
+
 OrlanStrike.ExorcismButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 {
-	SpellId = 879 -- Exorcism
+	SpellId = 879, -- Exorcism
+	Cooldown = 15
 });
 
 function OrlanStrike.ExorcismButton:GetCooldown()
@@ -1123,9 +1229,6 @@ function OrlanStrike.WeaponsOfTheLightButton:SetupButton()
 
 	self.Spell:SetAttribute("type", "macro");
 	self.Spell:SetAttribute("macrotext", "/cast " .. GetSpellInfo(self:GetSpellId()));
-	if self.Target then
-		self.Spell:SetAttribute("unit", self.Target);
-	end;
 end;
 
 OrlanStrike.SealButton = OrlanStrike.Button:CloneTo({});
@@ -1265,6 +1368,20 @@ function OrlanStrike.HealthButton:GetReason(gameState)
 	return 0;
 end;
 
+OrlanStrike.SelfWeaponsOfTheLightButton = OrlanStrike.HealthButton:CloneTo(
+{
+	SpellId = 175699,
+	Target = "player"
+});
+
+function OrlanStrike.SelfWeaponsOfTheLightButton:SetupButton()
+	local _, _, icon = GetSpellInfo(self:GetSpellId());
+	self.Background:SetTexture(icon);
+
+	self.Spell:SetAttribute("type", "macro");
+	self.Spell:SetAttribute("macrotext", "/cast [target=player] " .. GetSpellInfo(self:GetSpellId()));
+end;
+
 OrlanStrike.FlashOfLightButton = OrlanStrike.HealthButton:CloneTo(
 {
 	SpellId = 19750,
@@ -1293,10 +1410,24 @@ OrlanStrike.SealOfTruthButton = OrlanStrike.SealButton:CloneTo(
 });
 
 function OrlanStrike.SealOfTruthButton:GetReason(gameState)
-	if (OrlanStrike.SealButton.GetReason(self, gameState) > 0) and not gameState.HasSealOfTruth then
-		return 1;
+	if (OrlanStrike.SealButton.GetReason(self, gameState) == 0) or gameState.HasSealOfTruth then
+		return 0;
+	elseif self.OrlanStrike:AreEmpoweredSealsKnown() then
+		local judgmentCooldownExpiration = self.OrlanStrike:GetCooldownExpiration(GetSpellCooldown(GetSpellInfo(20271)));
+		if not gameState.HasSealOfRighteousness then
+			return 3;
+		elseif gameState:HasLiadrinsRighteousness() and 
+			(gameState.LiadrinsRighteousnessExpirationTime - gameState.Time >= 15) and
+			((not gameState:HasMaraadsTruth()) or (gameState.MaraadsTruthExpirationTime - gameState.Time < 2)) and
+			(judgmentCooldownExpiration - gameState.Time < 2) then
+			return 3;
+		elseif gameState:HasLiadrinsRighteousness() and
+			(gameState.LiadrinsRighteousnessExpirationTime - gameState.Time >= 
+				8 + math.max(judgmentCooldownExpiration - gameState.Time - 1.5, 0)) then
+			return 2;
+		end;
 	end;
-	return 0;
+	return 1;
 end;
 
 function OrlanStrike.SealOfTruthButton:UpdateGameState(gameState)
@@ -1310,10 +1441,25 @@ OrlanStrike.SealOfRighteousnessButton = OrlanStrike.SealButton:CloneTo(
 });
 
 function OrlanStrike.SealOfRighteousnessButton:GetReason(gameState)
-	if (OrlanStrike.SealButton.GetReason(self, gameState) > 0) and not gameState.HasSealOfRighteousness then
-		return 1;
+	if (OrlanStrike.SealButton.GetReason(self, gameState) == 0) or gameState.HasSealOfRighteousness then
+		return 0;
+	elseif self.OrlanStrike:AreEmpoweredSealsKnown() then
+		local judgmentCooldownExpiration = self.OrlanStrike:GetCooldownExpiration(GetSpellCooldown(GetSpellInfo(20271)));
+		if not gameState.HasSealOfTruth then
+			return 3;
+		elseif gameState:HasMaraadsTruth() and 
+			(gameState.MaraadsTruthExpirationTime - gameState.Time >= 12) and
+			((not gameState:HasLiadrinsRighteousness()) or 
+				(gameState.LiadrinsRighteousnessExpirationTime - gameState.Time < 2)) and
+			(judgmentCooldownExpiration - gameState.Time < 2) then
+			return 3;
+		elseif gameState:HasMaraadsTruth() and
+			(gameState.MaraadsTruthExpirationTime - gameState.Time >= 
+				8 + math.max(judgmentCooldownExpiration - gameState.Time - 1.5, 0)) then
+			return 2;
+		end;
 	end;
-	return 0;
+	return 1;
 end;
 
 function OrlanStrike.SealOfRighteousnessButton:UpdateGameState(gameState)
