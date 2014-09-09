@@ -251,12 +251,10 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.HealthButton:CloneTo(
+			self.FlashOfLightButton:CloneTo(
 			{
-				SpellId = 19750, -- Flash of Light
 				Row = 3,
-				Column = 2,
-				Target = "player"
+				Column = 2
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -722,7 +720,8 @@ function OrlanStrike:GetCurrentGameState()
 		HasHolyAvenger = function(self)
 			return self.HolyAvengerExpirationTime and
 				self.HolyAvengerExpirationTime > self.Time;
-		end
+		end,
+		HealthPercent = self.HealthPercent
 	};
 
 	if self.GameStateOverride and (self.GameStateOverrideTimeout > GetTime()) then
@@ -1224,11 +1223,22 @@ end;
 OrlanStrike.HealthButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.HealthButton:GetReason(gameState)
-	if (self.OrlanStrike.HealthPercent <= 0.2) and 
+	if (gameState.HealthPercent <= 0.2) and 
 		(self.OrlanStrike.Button.GetReason(self, gameState) > 0) then
 		return 1;
 	end;
 	return 0;
+end;
+
+OrlanStrike.FlashOfLightButton = OrlanStrike.HealthButton:CloneTo(
+{
+	SpellId = 19750,
+	Target = "player"
+});
+
+function OrlanStrike.FlashOfLightButton:UpdateGameState(gameState)
+	OrlanStrike.HealthButton.UpdateGameState(self, gameState);
+	gameState.HealthPercent = gameState.HealthPercent + 0.5;
 end;
 
 OrlanStrike.LayOnHandsButton = OrlanStrike.HealthButton:CloneTo(
@@ -1236,6 +1246,11 @@ OrlanStrike.LayOnHandsButton = OrlanStrike.HealthButton:CloneTo(
 	SpellId = 633,
 	Target = "player"
 });
+
+function OrlanStrike.LayOnHandsButton:UpdateGameState(gameState)
+	OrlanStrike.HealthButton.UpdateGameState(self, gameState);
+	gameState.HealthPercent = 1;
+end;
 
 OrlanStrike.SealOfTruthButton = OrlanStrike.SealButton:CloneTo(
 {
@@ -1299,12 +1314,17 @@ OrlanStrike.WordOfGloryButton = OrlanStrike.HolyPowerButton:CloneTo(
 function OrlanStrike.WordOfGloryButton:GetReason(gameState)
 	if self.OrlanStrike.HolyPowerButton.GetReason(self, gameState) == 0 then
 		return 0;
-	elseif self.OrlanStrike.HealthPercent <= 0.2 then
+	elseif gameState.HealthPercent <= 0.2 then
 		return 2;
-	elseif self.OrlanStrike.HealthPercent <= 0.4 then
+	elseif gameState.HealthPercent <= 0.4 then
 		return 1;
 	end;
 	return 0;
+end;
+
+function OrlanStrike.WordOfGloryButton:UpdateGameState(gameState)
+	OrlanStrike.HolyPowerButton.UpdateGameState(self, gameState);
+	gameState.HealthPercent = gameState.HealthPercent + 0.3;
 end;
 
 OrlanStrike.RebukeButton = OrlanStrike.Button:CloneTo(
