@@ -68,6 +68,10 @@ function OrlanStrike:Initialize(configName)
 			SpellId = 152262 -- Seraphim
 		},
 		{
+			SpellId = 85673, -- Word of Glory
+			MinReason = 2
+		},
+		{
 			SpellId = 85256, -- Templar's Verdict
 			MinReason = 2
 		},
@@ -98,6 +102,10 @@ function OrlanStrike:Initialize(configName)
 			MinReason = 2
 		},
 		{
+			SpellId = 85673, -- Word of Glory
+			MinReason = 2
+		},
+		{
 			SpellId = 85256, -- Templar's Verdict
 			MinReason = 2
 		},
@@ -121,19 +129,23 @@ function OrlanStrike:Initialize(configName)
 	self.HealingSpellPriorities =
 	{
 		{
-			SpellId = 85673 -- Word of Glory
+			SpellId = 85673, -- Word of Glory
+			Target = "player"
 		},
 		{
-			SpellId = 19750 -- Flash of Light
+			SpellId = 19750, -- Flash of Light
+			Target = "player"
 		},
 		{
-			SpellId = 633 -- Lay on Hands
+			SpellId = 633, -- Lay on Hands
+			Target = "player"
 		},
 		{
 			SpellId = 642 -- Divine Shield
 		},
 		{
-			SpellId = 20925 -- Sacred Shield
+			SpellId = 20925, -- Sacred Shield
+			Target = "player"
 		}
 	};
 end;
@@ -291,7 +303,8 @@ function OrlanStrike:CreateCastWindow()
 			{
 				SpellId = 114039, -- Hand of Purity
 				Row = 4,
-				Column = 0
+				Column = 0,
+				Target = "player"
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -299,7 +312,8 @@ function OrlanStrike:CreateCastWindow()
 			{
 				SpellId = 20925, -- Sacred Shield
 				Row = 4,
-				Column = 1
+				Column = 1,
+				Target = "player"
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -307,7 +321,8 @@ function OrlanStrike:CreateCastWindow()
 			{
 				SpellId = 498, -- Divine Protection
 				Row = 4,
-				Column = 2
+				Column = 2,
+				Target = "player"
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -337,6 +352,13 @@ function OrlanStrike:CreateCastWindow()
 			{
 				Row = 0,
 				Column = 0
+			})),
+		self:CreateButton(
+			castWindow,
+			self.HarshWordButton:CloneTo(
+			{
+				Row = 2,
+				Column = 2
 			}))
 	};
 	self.SpellCount = 25;
@@ -391,6 +413,16 @@ function OrlanStrike:CreateButton(parent, prototype)
 
 	button.Background = button:CreateTexture(nil, "BACKGROUND");
 	button.Background:SetAllPoints();
+
+	button.Text = button:CreateFontString(nil, "ARTWORK", "GameFontNormal");
+	button.Text:SetHeight(self.ButtonSize / 2);
+	button.Text:SetTextColor(1, 1, 1, 1);
+	button.Text:SetShadowColor(0, 0, 0, 1);
+	button.Text:SetShadowOffset(-1, -1);
+	button.Text:SetTextHeight(self.ButtonSize / 2);
+	button.Text:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 0);
+	button.Text:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 2, 0);
+	button.Text:SetJustifyH("RIGHT");
 
 	button.Cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate");
 	button.Cooldown:SetAllPoints();
@@ -501,17 +533,19 @@ function OrlanStrike:CalculateSpellPriorityIndexes(priorities)
 			indexes[index] = 
 				{
 					SpellId = priority.SpellId,
-					Index = orlanStrike:CalculateSpellIndex(priority.SpellId),
+					Index = orlanStrike:CalculateSpellIndex(priority.SpellId, priority.Target),
 					MinReason = priority.MinReason or 1
 				};
 		end);
 	return indexes;
 end;
 
-function OrlanStrike:CalculateSpellIndex(spellId)
+function OrlanStrike:CalculateSpellIndex(spellId, target)
 	local result;
 	for index = 1, self.SpellCount do
-		if self.CastWindow.Buttons[index] and (self.CastWindow.Buttons[index]:GetSpellId() == spellId) then
+		if self.CastWindow.Buttons[index] and 
+				(self.CastWindow.Buttons[index]:GetSpellId() == spellId) and
+				(self.CastWindow.Buttons[index].Target == target) then
 			result = index;
 			break;
 		end;
@@ -903,6 +937,16 @@ function OrlanStrike:IsAvengingWrathEnding(gameState)
 	return gameState:HasAvengingWrath() and (gameState.AvengingWrathExpirationTime < gameState.Time + 2);
 end;
 
+function OrlanStrike:HasGlyph(glyphId)
+	for socket = 1, NUM_GLYPH_SLOTS do
+		local _, _, _, currentGlyphId = GetGlyphSocketInfo(socket);
+		if currentGlyphId == glyphId then
+			return true;
+		end;
+	end;
+	return false;
+end;
+
 function OrlanStrike:RequestNonCombat()
 	if InCombatLockdown() then
 		print("OrlanStrike: Cannot be done in combat.");
@@ -980,6 +1024,11 @@ end;
 function OrlanStrike.Button:UpdateSpells()
 	local _, _, icon = GetSpellInfo(self:GetSpellId());
 	self.Background:SetTexture(icon);
+	if self.Target == "player" then
+		self.Text:SetText("self");
+	else
+		self.Text:SetText("");
+	end;
 end;
 
 function OrlanStrike.Button:GetSharedCooldownSpellId()
@@ -1310,7 +1359,18 @@ end;
 
 function OrlanStrike.WordOfGloryButton:UpdateGameState(gameState)
 	OrlanStrike.HolyPowerButton.UpdateGameState(self, gameState);
-	gameState.HealthPercent = gameState.HealthPercent + 0.3;
+	gameState.HealthPercent = 1;
+end;
+
+OrlanStrike.HarshWordButton = OrlanStrike.HolyPowerButton:CloneTo(
+{
+	SpellId = 85673 -- Word of Glory
+});
+
+function OrlanStrike.HarshWordButton:IsUsable(gameState)
+	return OrlanStrike.HolyPowerButton.IsUsable(self, gameState) and
+		UnitCanAttack("player", "target") and
+		self.OrlanStrike:HasGlyph(54938); -- Glyph of Harsh Words
 end;
 
 OrlanStrike.RebukeButton = OrlanStrike.Button:CloneTo(
