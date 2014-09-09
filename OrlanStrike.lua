@@ -565,11 +565,6 @@ function OrlanStrike:DetectArtOfWar()
 	self.HasArtOfWar = UnitBuff("player", artOfWarSpellName);
 end;
 
-function OrlanStrike:DetectAvengingWrath()
-	local avengingWrathSpellName = GetSpellInfo(31884); -- Avenging Wrath
-	self.HasAvengingWrath = UnitBuff("player", avengingWrathSpellName);
-end;
-
 function OrlanStrike:DetectSealOfTruth()
 	self.HasSealOfTruth = GetShapeshiftForm() == 1;
 end;
@@ -603,7 +598,6 @@ end;
 function OrlanStrike:DetectAuras()
 	self:DetectHolyAvenger();
 	self:DetectArtOfWar();
-	self:DetectAvengingWrath();
 	self:DetectForbearance();
 	self:DetectSealOfTruth();
 	self:DetectSealOfRighteousness();
@@ -731,6 +725,11 @@ function OrlanStrike:GetCurrentGameState()
 		HasSeraphim = function(self)
 			return self.SeraphimExpirationTime and
 				self.SeraphimExpirationTime > self.Time;
+		end,
+		AvengingWrathExpirationTime = select(7, UnitBuff("player", GetSpellInfo(31884))),
+		HasAvengingWrath = function(self)
+			return self.AvengingWrathExpirationTime and
+				self.AvengingWrathExpirationTime > self.Time;
 		end
 	};
 
@@ -739,6 +738,7 @@ function OrlanStrike:GetCurrentGameState()
 		gameState.DivinePurposeExpirationTime = self.GameStateOverride.DivinePurposeExpirationTime;
 		gameState.FinalVerdictExpirationTime = self.GameStateOverride.FinalVerdictExpirationTime;
 		gameState.SeraphimExpirationTime = self.GameStateOverride.SeraphimExpirationTime;
+		gameState.AvengingWrathExpirationTime = self.GameStateOverride.AvengingWrathExpirationTime;
 	end;
 
 	return gameState;
@@ -917,6 +917,19 @@ function OrlanStrike:UpdateButtonCooldown(button)
 	end;
 end;
 
+function OrlanStrike:IsSeraphimCooldownEnding(gameState)
+	local seraphimCooldownExpiration = self:GetCooldownExpiration(GetSpellCooldown(GetSpellInfo(152262)));
+	return (seraphimCooldownExpiration > gameState.Time) and (seraphimCooldownExpiration < gameState.Time + 3);
+end;
+
+function OrlanStrike:IsSeraphimEnding(gameState)
+	return gameState:HasSeraphim() and (gameState.SeraphimExpirationTime < gameState.Time + 3.5);
+end;
+
+function OrlanStrike:IsAvengingWrathEnding(gameState)
+	return gameState:HasAvengingWrath() and (gameState.AvengingWrathExpirationTime < gameState.Time + 2);
+end;
+
 function OrlanStrike:RequestNonCombat()
 	if InCombatLockdown() then
 		print("OrlanStrike: Cannot be done in combat.");
@@ -1067,6 +1080,11 @@ OrlanStrike.AvengingWrathButton = OrlanStrike.BurstButton:CloneTo(
 	SpellId = 31884
 });
 
+function OrlanStrike.AvengingWrathButton:UpdateGameState(gameState)
+	OrlanStrike.BurstButton.UpdateGameState(self, gameState);
+	gameState.AvengingWrathExpirationTime = gameState.Time + 20;
+end;
+
 OrlanStrike.WeaponsOfTheLightButton = OrlanStrike.BurstButton:CloneTo(
 {
 	SpellId = 175699
@@ -1118,22 +1136,14 @@ function OrlanStrike.HolyPowerButton:UpdateGameState(gameState)
 	end;
 end;
 
-function OrlanStrike.HolyPowerButton:IsSeraphimCooldownEnding(gameState)
-	local seraphimCooldownExpiration = OrlanStrike:GetCooldownExpiration(GetSpellCooldown(GetSpellInfo(152262)));
-	return (seraphimCooldownExpiration > gameState.Time) and (seraphimCooldownExpiration < gameState.Time + 3);
-end;
-
-function OrlanStrike.HolyPowerButton:IsSeraphimEnding(gameState)
-	return gameState:HasSeraphim() and (gameState.SeraphimExpirationTime < gameState.Time + 3.5);
-end;
-
 function OrlanStrike.HolyPowerButton:GetReason(gameState)
 	if self.OrlanStrike.Button.GetReason(self, gameState) == 0 then
 		return 0;
 	elseif gameState:HasDivinePurpose() or
-		self:IsSeraphimEnding(gameState) or
+		self.OrlanStrike:IsSeraphimEnding(gameState) or
+		self.OrlanStrike:IsAvengingWrathEnding(gameState) or
 		((gameState.HolyPower == UnitPowerMax("player", SPELL_POWER_HOLY_POWER)) and
-			not self:IsSeraphimCooldownEnding(gameState)) then
+			not self.OrlanStrike:IsSeraphimCooldownEnding(gameState)) then
 		return 2;
 	end;
 	return 1;
@@ -1199,7 +1209,7 @@ function OrlanStrike.SeraphimButton:IsUsable(gameState)
 end;
 
 function OrlanStrike.SeraphimButton:GetReason(gameState)
-	if self:IsUsable(gameState) then
+	if self:IsUsable(gameState) and not self.OrlanStrike:IsAvengingWrathEnding(gameState) then
 		return 1;
 	end;
 	return 0;
