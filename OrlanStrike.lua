@@ -555,18 +555,9 @@ function OrlanStrike:HandleAbilityUse(spellId)
 	end;
 end;
 
-function OrlanStrike:DetectHolyAvenger()
-	local holyAvengerSpellName = GetSpellInfo(105809); -- Holy Avenger
-	self.HasHolyAvenger = UnitBuff("player", holyAvengerSpellName);
-end;
-
 function OrlanStrike:DetectArtOfWar()
 	local artOfWarSpellName = GetSpellInfo(59578); -- Art of War
 	self.HasArtOfWar = UnitBuff("player", artOfWarSpellName);
-end;
-
-function OrlanStrike:DetectSealOfRighteousness()
-	self.HasSealOfRighteousness = GetShapeshiftForm() == 2;
 end;
 
 function OrlanStrike:DetectForbearance()
@@ -592,10 +583,8 @@ function OrlanStrike:DetectDispellableDebuffs()
 end;
 
 function OrlanStrike:DetectAuras()
-	self:DetectHolyAvenger();
 	self:DetectArtOfWar();
 	self:DetectForbearance();
-	self:DetectSealOfRighteousness();
 	self:DetectDispellableDebuffs();
 end;
 
@@ -727,7 +716,13 @@ function OrlanStrike:GetCurrentGameState()
 			return self.AvengingWrathExpirationTime and
 				self.AvengingWrathExpirationTime > self.Time;
 		end,
-		HasSealOfTruth = GetShapeshiftForm() == 1
+		HasSealOfTruth = GetShapeshiftForm() == 1,
+		HasSealOfRighteousness = GetShapeshiftForm() == 2,
+		HolyAvengerExpirationTime = select(7, UnitBuff("player", GetSpellInfo(105809))),
+		HasHolyAvenger = function(self)
+			return self.HolyAvengerExpirationTime and
+				self.HolyAvengerExpirationTime > self.Time;
+		end
 	};
 
 	if self.GameStateOverride and (self.GameStateOverrideTimeout > GetTime()) then
@@ -1019,7 +1014,7 @@ OrlanStrike.HolyPowerGeneratorButton = OrlanStrike.Button:CloneTo({});
 function OrlanStrike.HolyPowerGeneratorButton:UpdateGameState(gameState)
 	self.OrlanStrike.Button.UpdateGameState(self, gameState);
 
-	if self.OrlanStrike.HasHolyAvenger then
+	if gameState:HasHolyAvenger() then
 		gameState.HolyPower = gameState.HolyPower + 3;
 	else
 		gameState.HolyPower = gameState.HolyPower + 1;
@@ -1068,6 +1063,11 @@ OrlanStrike.HolyAvengerButton = OrlanStrike.BurstButton:CloneTo(
 	SpellId = 105809
 });
 
+function OrlanStrike.HolyAvengerButton:UpdateGameState(gameState)
+	OrlanStrike.BurstButton.UpdateGameState(self, gameState);
+	gameState.HolyAvengerExpirationTime = gameState.Time + 18;
+end;
+
 OrlanStrike.AvengingWrathButton = OrlanStrike.BurstButton:CloneTo(
 {
 	SpellId = 31884
@@ -1109,6 +1109,7 @@ end;
 function OrlanStrike.SealButton:UpdateGameState(gameState)
 	OrlanStrike.Button.UpdateGameState(self, gameState);
 	gameState.HasSealOfTruth = false;
+	gameState.HasSealOfRighteousness = false;
 end;
 
 OrlanStrike.HolyPowerButton = OrlanStrike.Button:CloneTo({});
@@ -1259,10 +1260,15 @@ OrlanStrike.SealOfRighteousnessButton = OrlanStrike.SealButton:CloneTo(
 });
 
 function OrlanStrike.SealOfRighteousnessButton:GetReason(gameState)
-	if (OrlanStrike.SealButton.GetReason(self, gameState) > 0) and not self.OrlanStrike.HasSealOfRighteousness then
+	if (OrlanStrike.SealButton.GetReason(self, gameState) > 0) and not gameState.HasSealOfRighteousness then
 		return 1;
 	end;
 	return 0;
+end;
+
+function OrlanStrike.SealOfRighteousnessButton:UpdateGameState(gameState)
+	OrlanStrike.SealButton.UpdateGameState(self, gameState);
+	gameState.HasSealOfRighteousness = true;
 end;
 
 OrlanStrike.CleanseButton = OrlanStrike.Button:CloneTo(
