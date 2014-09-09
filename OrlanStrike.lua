@@ -565,10 +565,6 @@ function OrlanStrike:DetectArtOfWar()
 	self.HasArtOfWar = UnitBuff("player", artOfWarSpellName);
 end;
 
-function OrlanStrike:DetectSealOfTruth()
-	self.HasSealOfTruth = GetShapeshiftForm() == 1;
-end;
-
 function OrlanStrike:DetectSealOfRighteousness()
 	self.HasSealOfRighteousness = GetShapeshiftForm() == 2;
 end;
@@ -599,7 +595,6 @@ function OrlanStrike:DetectAuras()
 	self:DetectHolyAvenger();
 	self:DetectArtOfWar();
 	self:DetectForbearance();
-	self:DetectSealOfTruth();
 	self:DetectSealOfRighteousness();
 	self:DetectDispellableDebuffs();
 end;
@@ -709,6 +704,7 @@ function OrlanStrike:GetCurrentGameState()
 
 	local gameState =
 	{
+		CloneTo = OrlanStrike.CloneTo,
 		HolyPower = UnitPower("player", SPELL_POWER_HOLY_POWER), 
 		Time = self.GcdExpiration,
 		DivinePurposeExpirationTime = select(7, UnitBuff("player", GetSpellInfo(90174))),
@@ -730,15 +726,12 @@ function OrlanStrike:GetCurrentGameState()
 		HasAvengingWrath = function(self)
 			return self.AvengingWrathExpirationTime and
 				self.AvengingWrathExpirationTime > self.Time;
-		end
+		end,
+		HasSealOfTruth = GetShapeshiftForm() == 1
 	};
 
 	if self.GameStateOverride and (self.GameStateOverrideTimeout > GetTime()) then
-		gameState.HolyPower = self.GameStateOverride.HolyPower;
-		gameState.DivinePurposeExpirationTime = self.GameStateOverride.DivinePurposeExpirationTime;
-		gameState.FinalVerdictExpirationTime = self.GameStateOverride.FinalVerdictExpirationTime;
-		gameState.SeraphimExpirationTime = self.GameStateOverride.SeraphimExpirationTime;
-		gameState.AvengingWrathExpirationTime = self.GameStateOverride.AvengingWrathExpirationTime;
+		self.GameStateOverride:CloneTo(gameState);
 	end;
 
 	return gameState;
@@ -1113,6 +1106,11 @@ function OrlanStrike.SealButton:UpdateDisplay(window, gameState)
 	end;
 end;
 
+function OrlanStrike.SealButton:UpdateGameState(gameState)
+	OrlanStrike.Button.UpdateGameState(self, gameState);
+	gameState.HasSealOfTruth = false;
+end;
+
 OrlanStrike.HolyPowerButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.HolyPowerButton:IsLackingMana()
@@ -1244,10 +1242,15 @@ OrlanStrike.SealOfTruthButton = OrlanStrike.SealButton:CloneTo(
 });
 
 function OrlanStrike.SealOfTruthButton:GetReason(gameState)
-	if (OrlanStrike.SealButton.GetReason(self, gameState) > 0) and not self.OrlanStrike.HasSealOfTruth then
+	if (OrlanStrike.SealButton.GetReason(self, gameState) > 0) and not gameState.HasSealOfTruth then
 		return 1;
 	end;
 	return 0;
+end;
+
+function OrlanStrike.SealOfTruthButton:UpdateGameState(gameState)
+	OrlanStrike.SealButton.UpdateGameState(self, gameState);
+	gameState.HasSealOfTruth = true;
 end;
 
 OrlanStrike.SealOfRighteousnessButton = OrlanStrike.SealButton:CloneTo(
