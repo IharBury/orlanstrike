@@ -545,11 +545,6 @@ function OrlanStrike:HandleAbilityUse(spellId)
 	end;
 end;
 
-function OrlanStrike:DetectArtOfWar()
-	local artOfWarSpellName = GetSpellInfo(59578); -- Art of War
-	self.HasArtOfWar = UnitBuff("player", artOfWarSpellName);
-end;
-
 function OrlanStrike:DetectForbearance()
 	local forbearanceSpellName = GetSpellInfo(25771); -- Forbearance
 	self.HasForbearance = UnitDebuff("player", forbearanceSpellName);
@@ -573,7 +568,6 @@ function OrlanStrike:DetectDispellableDebuffs()
 end;
 
 function OrlanStrike:DetectAuras()
-	self:DetectArtOfWar();
 	self:DetectForbearance();
 	self:DetectDispellableDebuffs();
 end;
