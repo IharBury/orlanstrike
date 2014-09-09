@@ -65,6 +65,9 @@ function OrlanStrike:Initialize(configName)
 	self.SingleTargetPriorities =
 	{
 		{
+			SpellId = 152262 -- Seraphim
+		},
+		{
 			SpellId = 85256, -- Templar's Verdict
 			MinReason = 2
 		},
@@ -83,6 +86,9 @@ function OrlanStrike:Initialize(configName)
 	};
 	self.MultiTargetPriorities =
 	{
+		{
+			SpellId = 152262 -- Seraphim
+		},
 		{
 			SpellId = 85256, -- Templar's Verdict
 			MinReason = 3
@@ -333,6 +339,13 @@ function OrlanStrike:CreateCastWindow()
 			self.WeaponsOfTheLightButton:CloneTo(
 			{
 				Row = 1,
+				Column = 0
+			})),
+		self:CreateButton(
+			castWindow,
+			self.SeraphimButton:CloneTo(
+			{
+				Row = 0,
 				Column = 0
 			}))
 	};
@@ -713,12 +726,19 @@ function OrlanStrike:GetCurrentGameState()
 		HasFinalVerdict = function(self)
 			return self.FinalVerdictExpirationTime and
 				self.FinalVerdictExpirationTime > self.Time;
+		end,
+		SeraphimExpirationTime = select(7, UnitBuff("player", GetSpellInfo(152262))),
+		HasSeraphim = function(self)
+			return self.SeraphimExpirationTime and
+				self.SeraphimExpirationTime > self.Time;
 		end
 	};
 
 	if self.GameStateOverride and (self.GameStateOverrideTimeout > GetTime()) then
 		gameState.HolyPower = self.GameStateOverride.HolyPower;
 		gameState.DivinePurposeExpirationTime = self.GameStateOverride.DivinePurposeExpirationTime;
+		gameState.FinalVerdictExpirationTime = self.GameStateOverride.FinalVerdictExpirationTime;
+		gameState.SeraphimExpirationTime = self.GameStateOverride.SeraphimExpirationTime;
 	end;
 
 	return gameState;
@@ -1098,15 +1118,25 @@ function OrlanStrike.HolyPowerButton:UpdateGameState(gameState)
 	end;
 end;
 
+function OrlanStrike.HolyPowerButton:IsSeraphimCooldownEnding(gameState)
+	local seraphimCooldownExpiration = OrlanStrike:GetCooldownExpiration(GetSpellCooldown(GetSpellInfo(152262)));
+	return (seraphimCooldownExpiration > gameState.Time) and (seraphimCooldownExpiration < gameState.Time + 3);
+end;
+
+function OrlanStrike.HolyPowerButton:IsSeraphimEnding(gameState)
+	return gameState:HasSeraphim() and (gameState.SeraphimExpirationTime < gameState.Time + 3.5);
+end;
+
 function OrlanStrike.HolyPowerButton:GetReason(gameState)
 	if self.OrlanStrike.Button.GetReason(self, gameState) == 0 then
 		return 0;
-	elseif (gameState.HolyPower == UnitPowerMax("player", SPELL_POWER_HOLY_POWER)) or gameState:HasDivinePurpose() then
+	elseif gameState:HasDivinePurpose() or
+		self:IsSeraphimEnding(gameState) or
+		((gameState.HolyPower == UnitPowerMax("player", SPELL_POWER_HOLY_POWER)) and
+			not self:IsSeraphimCooldownEnding(gameState)) then
 		return 2;
-	elseif gameState.HolyPower >= 3 then
-		return 1;
 	end;
-	return 0;
+	return 1;
 end;
 
 OrlanStrike.ThreeHolyPowerButton = OrlanStrike.HolyPowerButton:CloneTo({});
@@ -1158,7 +1188,10 @@ function OrlanStrike.DivineStormButton:GetReason(gameState)
 	return baseReason;
 end;
 
-OrlanStrike.SeraphimButton = OrlanStrike.HolyPowerButton:CloneTo({});
+OrlanStrike.SeraphimButton = OrlanStrike.HolyPowerButton:CloneTo(
+{
+	SpellId = 152262
+});
 
 function OrlanStrike.SeraphimButton:IsUsable(gameState)
 	return (gameState.HolyPower >= 5) and 
@@ -1166,11 +1199,17 @@ function OrlanStrike.SeraphimButton:IsUsable(gameState)
 end;
 
 function OrlanStrike.SeraphimButton:GetReason(gameState)
-	if (gameState.HolyPower >= 5) and 
-			(self.OrlanStrike.HolyPowerButton.GetReason(self, gameState) > 0) then
+	if self:IsUsable(gameState) then
 		return 1;
 	end;
 	return 0;
+end;
+
+function OrlanStrike.SeraphimButton:UpdateGameState(gameState)
+	self.OrlanStrike.Button.UpdateGameState(self, gameState);
+
+	gameState.HolyPower = gameState.HolyPower - 5;
+	gameState.SeraphimExpirationTime = gameState.Time + 30;
 end;
 
 OrlanStrike.HealthButton = OrlanStrike.Button:CloneTo({});
