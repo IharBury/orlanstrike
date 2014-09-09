@@ -313,14 +313,6 @@ function OrlanStrike:CreateCastWindow()
 			castWindow, 
 			self.Button:CloneTo(
 			{
-				SpellId = 31821, -- Devotion Aura
-				Row = 4,
-				Column = 3
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.Button:CloneTo(
-			{
 				SpellId = 1022, -- Hand of Protection
 				Row = 4,
 				Column = 4
