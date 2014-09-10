@@ -235,7 +235,8 @@ function OrlanStrike:CreateCastWindow()
 				SpellId = 35395, -- Crusader Strike
 				SharedCooldownSpellId = 53595, -- Hammer of the Righteous
 				Row = 0,
-				Column = 3
+				Column = 3,
+				CooldownLength = 4.5
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -257,7 +258,8 @@ function OrlanStrike:CreateCastWindow()
 			{
 				SpellId = 24275, -- Hammer of Wrath
 				Row = 1,
-				Column = 2
+				Column = 2,
+				CooldownLength = 6
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -266,7 +268,8 @@ function OrlanStrike:CreateCastWindow()
 				SpellId = 53595, -- Hammer of the Righteous
 				SharedCooldownSpellId = 35395, -- Crusader Strike
 				Row = 1,
-				Column = 3
+				Column = 3,
+				CooldownLength = 4.5
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -905,23 +908,26 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 		local nextTime = minCooldownExpiration + 1.25;
 		local nextSpellCooldownExpirations = {};
 		local nextGameState = self:GetCurrentGameState();
-		if firstSpellIndex then
-			local firstSpellButton = self.CastWindow.Buttons[firstSpellIndex];
-			firstSpellButton:UpdateGameState(nextGameState);
-			for spellIndex = 1, self.SpellCount do
-				local button = self.CastWindow.Buttons[spellIndex];
-				if button and button:GetCooldownExpiration() then
-					if button:GetCooldownExpiration() < nextTime then
-						nextSpellCooldownExpirations[spellIndex] = nextTime;
-					else
-						nextSpellCooldownExpirations[spellIndex] = button:GetCooldownExpiration();
-					end;
-				end;
-				if sharedCooldownSpellId and button and (button:GetSpellId() == sharedCooldownSpellId) then
-					nextSpellCooldownExpirations[spellIndex] = minCooldownExpiration + 1000;
+		local firstSpellButton = self.CastWindow.Buttons[firstSpellIndex];
+		firstSpellButton:UpdateGameState(nextGameState);
+		for spellIndex = 1, self.SpellCount do
+			local button = self.CastWindow.Buttons[spellIndex];
+			if button and button:GetCooldownExpiration() then
+				if button:GetCooldownExpiration() < nextTime then
+					nextSpellCooldownExpirations[spellIndex] = nextTime;
+				else
+					nextSpellCooldownExpirations[spellIndex] = button:GetCooldownExpiration();
 				end;
 			end;
-			nextSpellCooldownExpirations[firstSpellIndex] = minCooldownExpiration + 1000;
+			if sharedCooldownSpellId and 
+					button and 
+					(button:GetSpellId() == sharedCooldownSpellId) and
+					firstSpellButton.CooldownLength then
+				nextSpellCooldownExpirations[spellIndex] = minCooldownExpiration + firstSpellButton.CooldownLength;
+			end;
+		end;
+		if firstSpellButton.CooldownLength then
+			nextSpellCooldownExpirations[firstSpellIndex] = minCooldownExpiration + firstSpellButton.CooldownLength;
 		end;
 		nextGameState.Time = nextTime;
 
@@ -1118,7 +1124,8 @@ end;
 
 OrlanStrike.JudgmentButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 {
-	SpellId = 20271
+	SpellId = 20271,
+	CooldownLength = 6
 });
 
 function OrlanStrike.JudgmentButton:GetReason(gameState)
@@ -1168,7 +1175,7 @@ end;
 OrlanStrike.ExorcismButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 {
 	SpellId = 879, -- Exorcism
-	Cooldown = 15
+	CooldownLength = 15
 });
 
 function OrlanStrike.ExorcismButton:GetCooldown()
