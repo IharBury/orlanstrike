@@ -1182,7 +1182,7 @@ function OrlanStrike.ExorcismButton:GetCooldown()
 	local start1, duration1, enable1 = GetSpellCooldown(GetSpellInfo(self:GetSpellId()));
 	local start2, duration2, enable2 = GetSpellCooldown(GetSpellInfo(122032)); -- Exorcism with Glyph of Mass Exorcism
 	local start, duration, enable;
-	if duration1 > duration2 then
+	if duration1 and ((not duration2) or (duration1 > duration2)) then
 		start = start1;
 		duration = duration1;
 		enable = enable1;
