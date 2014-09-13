@@ -811,6 +811,11 @@ function OrlanStrike:GetCurrentGameState()
 		HasBlazingContempt = function(self)
 			return self.BlazingContemptExpirationTime and
 				self.BlazingContemptExpirationTime > self.Time;
+		end,
+		DivineCrusaderExpirationTime = select(7, UnitBuff("player", GetSpellInfo(144595))),
+		HasDivineCrusader = function(self)
+			return self.DivineCrusaderExpirationTime and
+				self.DivineCrusaderExpirationTime > self.Time;
 		end
 	};
 
@@ -1368,7 +1373,17 @@ OrlanStrike.DivineStormButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
 });
 
 function OrlanStrike.DivineStormButton:UpdateGameState(gameState)
-	OrlanStrike.ThreeHolyPowerButton.UpdateGameState(self, gameState);
+	self.OrlanStrike.Button.UpdateGameState(self, gameState);
+
+	if gameState:HasDivinePurpose() or gameState:HasDivineCrusader() then
+	elseif gameState.HolyPower < 3 then
+		gameState.HolyPower = 0;
+	else
+		gameState.HolyPower = gameState.HolyPower - 3;
+	end;
+
+	gameState.DivinePurposeExpirationTime = nil;
+	gameState.DivineCrusaderExpirationTime = nil;
 	gameState.FinalVerdictExpirationTime = nil;
 end;
 
@@ -1378,6 +1393,11 @@ function OrlanStrike.DivineStormButton:GetReason(gameState)
 		return 3;
 	end;
 	return baseReason;
+end;
+
+function OrlanStrike.DivineStormButton:IsUsable(gameState)
+	return ((gameState.HolyPower >= 3) or gameState:HasDivinePurpose() or gameState:HasDivineCrusader()) and 
+		OrlanStrike.Button.IsUsable(self, gameState);
 end;
 
 OrlanStrike.SeraphimButton = OrlanStrike.HolyPowerButton:CloneTo(
