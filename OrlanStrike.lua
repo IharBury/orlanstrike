@@ -665,7 +665,13 @@ function OrlanStrike:DetectHealthPercent()
 end;
 
 function OrlanStrike:DetectManaPercent()
-	self.ManaPercent = UnitPower("player", SPELL_POWER_MANA) / UnitPowerMax("player", SPELL_POWER_MANA);
+	local mana = UnitPower("player", SPELL_POWER_MANA);
+	local maxMana = UnitPowerMax("player", SPELL_POWER_MANA);
+	if (not mana) or (not maxMana) or (maxMana == 0) then
+		self.ManaPercent = 0;
+	else
+		self.ManaPercent = mana / maxMana;
+	end;
 end;
 
 function OrlanStrike:DetectThreat()
