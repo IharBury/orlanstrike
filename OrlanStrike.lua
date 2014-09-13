@@ -806,6 +806,11 @@ function OrlanStrike:GetCurrentGameState()
 		HasLiadrinsRighteousness = function(self)
 			return self.LiadrinsRighteousnessExpirationTime and
 				self.LiadrinsRighteousnessExpirationTime > self.Time;
+		end,
+		BlazingContemptExpirationTime = select(7, UnitBuff("player", GetSpellInfo(166831))),
+		HasBlazingContempt = function(self)
+			return self.BlazingContemptExpirationTime and
+				self.BlazingContemptExpirationTime > self.Time;
 		end
 	};
 
@@ -1192,6 +1197,24 @@ OrlanStrike.ExorcismButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 	CooldownLength = 15,
 	DoesRequireTarget = true
 });
+
+function OrlanStrike.ExorcismButton:UpdateGameState(gameState)
+	self.OrlanStrike.Button.UpdateGameState(self, gameState);
+
+	if gameState:HasBlazingContempt() then
+		gameState.HolyPower = gameState.HolyPower + 3;
+		gameState.BlazingContemptExpirationTime = nil;
+	elseif gameState:HasHolyAvenger() then
+		gameState.HolyPower = gameState.HolyPower + 3;
+	else
+		gameState.HolyPower = gameState.HolyPower + 1;
+	end;
+
+	local maxHolyPower = UnitPowerMax("player", SPELL_POWER_HOLY_POWER);
+	if gameState.HolyPower > maxHolyPower then
+		gameState.HolyPower = maxHolyPower;
+	end;
+end;
 
 function OrlanStrike.ExorcismButton:GetCooldown()
 	local start1, duration1, enable1 = GetSpellCooldown(GetSpellInfo(self:GetSpellId()));
