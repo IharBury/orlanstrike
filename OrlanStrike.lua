@@ -1394,6 +1394,9 @@ end;
 
 function OrlanStrike.DivineStormButton:GetReason(gameState)
 	local baseReason = self.OrlanStrike.ThreeHolyPowerButton.GetReason(self, gameState);
+	if (baseReason == 1) and gameState:HasDivineCrusader() then
+		baseReason = 2;
+	end;
 	if (baseReason == 2) and gameState:HasFinalVerdict() then
 		return 3;
 	end;
