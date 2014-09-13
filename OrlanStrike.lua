@@ -1560,6 +1560,14 @@ OrlanStrike.HarshWordButton = OrlanStrike.HolyPowerButton:CloneTo(
 	DoesRequireTarget = true
 });
 
+function OrlanStrike.HarshWordButton:SetupButton()
+	local _, _, icon = GetSpellInfo(self:GetSpellId());
+	self.Background:SetTexture(icon);
+
+	self.Spell:SetAttribute("type", "macro");
+	self.Spell:SetAttribute("macrotext", "/cast " .. GetSpellInfo(self:GetSpellId()));
+end;
+
 function OrlanStrike.HarshWordButton:IsUsable(gameState)
 	return OrlanStrike.HolyPowerButton.IsUsable(self, gameState) and
 		UnitCanAttack("player", "target") and
