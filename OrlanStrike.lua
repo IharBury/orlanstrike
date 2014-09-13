@@ -236,7 +236,8 @@ function OrlanStrike:CreateCastWindow()
 				SharedCooldownSpellId = 53595, -- Hammer of the Righteous
 				Row = 0,
 				Column = 3,
-				CooldownLength = 4.5
+				CooldownLength = 4.5,
+				DoesRequireTarget = true
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -259,7 +260,8 @@ function OrlanStrike:CreateCastWindow()
 				SpellId = 24275, -- Hammer of Wrath
 				Row = 1,
 				Column = 2,
-				CooldownLength = 6
+				CooldownLength = 6,
+				DoesRequireTarget = true
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -269,7 +271,8 @@ function OrlanStrike:CreateCastWindow()
 				SharedCooldownSpellId = 35395, -- Crusader Strike
 				Row = 1,
 				Column = 3,
-				CooldownLength = 4.5
+				CooldownLength = 4.5,
+				DoesRequireTarget = true
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -611,15 +614,22 @@ function OrlanStrike:Hide()
 end;
 
 function OrlanStrike:HandleAbilityUse(spellId)
-	self:DetectGcd();
+	if self.CastWindow:IsShown() then
+		self:DetectAuras();
+		self:DetectHealthPercent();
+		self:DetectManaPercent();
+		self:DetectThreat();
 
-	local gameState = self:GetCurrentGameState();
-	for spellIndex = 1, self.SpellCount do
-		local button = self.CastWindow.Buttons[spellIndex];
-		if button and button:GetSpellId() and (button:GetSpellId() == spellId) then
-			button:UpdateGameState(gameState);
-			self.GameStateOverride = gameState;
-			self.GameStateOverrideTimeout = GetTime() + 0.5;
+		self:DetectGcd();
+
+		local gameState = self:GetCurrentGameState();
+		for spellIndex = 1, self.SpellCount do
+			local button = self.CastWindow.Buttons[spellIndex];
+			if button and button:GetSpellId() and (button:GetSpellId() == spellId) then
+				button:UpdateGameState(gameState);
+				self.GameStateOverride = gameState;
+				self.GameStateOverrideTimeout = GetTime() + 0.5;
+			end;
 		end;
 	end;
 end;
@@ -1060,7 +1070,10 @@ end;
 function OrlanStrike.Button:IsUsable(gameState)
 	return self:IsAvailable() and 
 		(self:GetCooldownExpiration() <= gameState.Time) and
-		not self:IsLackingMana();
+		(not self:IsLackingMana()) and
+		((not self.DoesRequireTarget) or
+			(not UnitCanAttack("player", "target")) or
+			(IsSpellInRange(GetSpellInfo(self:GetSpellId()), "target") == 1));
 end;
 
 function OrlanStrike.Button:GetReason(gameState)
@@ -1125,7 +1138,8 @@ end;
 OrlanStrike.JudgmentButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 {
 	SpellId = 20271,
-	CooldownLength = 6
+	CooldownLength = 6,
+	DoesRequireTarget = true
 });
 
 function OrlanStrike.JudgmentButton:GetReason(gameState)
@@ -1175,7 +1189,8 @@ end;
 OrlanStrike.ExorcismButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 {
 	SpellId = 879, -- Exorcism
-	CooldownLength = 15
+	CooldownLength = 15,
+	DoesRequireTarget = true
 });
 
 function OrlanStrike.ExorcismButton:GetCooldown()
@@ -1301,7 +1316,8 @@ end;
 
 OrlanStrike.TemplarsVerdictButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
 {
-	SpellId = 85256
+	SpellId = 85256,
+	DoesRequireTarget = true
 });
 
 function OrlanStrike.TemplarsVerdictButton:IsFinalVerdictKnown()
@@ -1517,7 +1533,8 @@ end;
 
 OrlanStrike.HarshWordButton = OrlanStrike.HolyPowerButton:CloneTo(
 {
-	SpellId = 85673 -- Word of Glory
+	SpellId = 85673, -- Word of Glory
+	DoesRequireTarget = true
 });
 
 function OrlanStrike.HarshWordButton:IsUsable(gameState)
