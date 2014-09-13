@@ -187,7 +187,6 @@ function OrlanStrike:Initialize(configName)
 end;
 
 function OrlanStrike:CreateCastWindow()
-	local orlanStrike = self;
 	local castWindow = CreateFrame("Frame", self.CastWindowName, UIParent);
 	castWindow:SetScale(self.Config.Scale);
 
@@ -766,7 +765,7 @@ function OrlanStrike:GetCurrentGameState()
 
 	local gameState =
 	{
-		CloneTo = OrlanStrike.CloneTo,
+		CloneTo = self.CloneTo,
 		HolyPower = UnitPower("player", SPELL_POWER_HOLY_POWER), 
 		Time = self.GcdExpiration,
 		DivinePurposeExpirationTime = select(7, UnitBuff("player", GetSpellInfo(90174))),
@@ -1153,7 +1152,7 @@ OrlanStrike.JudgmentButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 });
 
 function OrlanStrike.JudgmentButton:GetReason(gameState)
-	if OrlanStrike.HolyPowerGeneratorButton.GetReason(self, gameState) == 0 then
+	if self.OrlanStrike.HolyPowerGeneratorButton.GetReason(self, gameState) == 0 then
 		return 0;
 	elseif self.OrlanStrike:AreEmpoweredSealsKnown() then
 		if gameState.HasSealOfTruth then
@@ -1186,7 +1185,7 @@ function OrlanStrike.JudgmentButton:GetReason(gameState)
 end;
 
 function OrlanStrike.JudgmentButton:UpdateGameState(gameState)
-	OrlanStrike.HolyPowerGeneratorButton.UpdateGameState(self, gameState);
+	self.OrlanStrike.HolyPowerGeneratorButton.UpdateGameState(self, gameState);
 	if self.OrlanStrike:AreEmpoweredSealsKnown() then
 		if gameState.HasSealOfTruth then
 			gameState.MaraadsTruthExpirationTime = gameState.Time + 20;
@@ -1254,7 +1253,7 @@ OrlanStrike.HolyAvengerButton = OrlanStrike.BurstButton:CloneTo(
 });
 
 function OrlanStrike.HolyAvengerButton:UpdateGameState(gameState)
-	OrlanStrike.BurstButton.UpdateGameState(self, gameState);
+	self.OrlanStrike.BurstButton.UpdateGameState(self, gameState);
 	gameState.HolyAvengerExpirationTime = gameState.Time + 18;
 end;
 
@@ -1264,7 +1263,7 @@ OrlanStrike.AvengingWrathButton = OrlanStrike.BurstButton:CloneTo(
 });
 
 function OrlanStrike.AvengingWrathButton:UpdateGameState(gameState)
-	OrlanStrike.BurstButton.UpdateGameState(self, gameState);
+	self.OrlanStrike.BurstButton.UpdateGameState(self, gameState);
 	gameState.AvengingWrathExpirationTime = gameState.Time + 20;
 end;
 
@@ -1294,7 +1293,7 @@ function OrlanStrike.SealButton:UpdateDisplay(window, gameState)
 end;
 
 function OrlanStrike.SealButton:UpdateGameState(gameState)
-	OrlanStrike.Button.UpdateGameState(self, gameState);
+	self.OrlanStrike.Button.UpdateGameState(self, gameState);
 	gameState.HasSealOfTruth = false;
 	gameState.HasSealOfRighteousness = false;
 end;
@@ -1339,7 +1338,7 @@ OrlanStrike.ThreeHolyPowerButton = OrlanStrike.HolyPowerButton:CloneTo({});
 
 function OrlanStrike.ThreeHolyPowerButton:IsUsable(gameState)
 	return ((gameState.HolyPower >= 3) or gameState:HasDivinePurpose()) and 
-		OrlanStrike.Button.IsUsable(self, gameState);
+		self.OrlanStrike.Button.IsUsable(self, gameState);
 end;
 
 OrlanStrike.TemplarsVerdictButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
@@ -1353,14 +1352,14 @@ function OrlanStrike.TemplarsVerdictButton:IsFinalVerdictKnown()
 end;
 
 function OrlanStrike.TemplarsVerdictButton:UpdateGameState(gameState)
-	OrlanStrike.ThreeHolyPowerButton.UpdateGameState(self, gameState);
+	self.OrlanStrike.ThreeHolyPowerButton.UpdateGameState(self, gameState);
 	if self:IsFinalVerdictKnown() then
 		gameState.FinalVerdictExpirationTime = gameState.Time + 30;
 	end;
 end;
 
 function OrlanStrike.TemplarsVerdictButton:GetReason(gameState)
-	local baseReason = OrlanStrike.ThreeHolyPowerButton.GetReason(self, gameState);
+	local baseReason = self.OrlanStrike.ThreeHolyPowerButton.GetReason(self, gameState);
 	if (baseReason == 2) and self:IsFinalVerdictKnown() and not gameState:HasFinalVerdict() then
 		return 3;
 	end;
@@ -1388,7 +1387,7 @@ function OrlanStrike.DivineStormButton:UpdateGameState(gameState)
 end;
 
 function OrlanStrike.DivineStormButton:GetReason(gameState)
-	local baseReason = OrlanStrike.ThreeHolyPowerButton.GetReason(self, gameState);
+	local baseReason = self.OrlanStrike.ThreeHolyPowerButton.GetReason(self, gameState);
 	if (baseReason == 2) and gameState:HasFinalVerdict() then
 		return 3;
 	end;
@@ -1397,7 +1396,7 @@ end;
 
 function OrlanStrike.DivineStormButton:IsUsable(gameState)
 	return ((gameState.HolyPower >= 3) or gameState:HasDivinePurpose() or gameState:HasDivineCrusader()) and 
-		OrlanStrike.Button.IsUsable(self, gameState);
+		self.OrlanStrike.Button.IsUsable(self, gameState);
 end;
 
 OrlanStrike.SeraphimButton = OrlanStrike.HolyPowerButton:CloneTo(
@@ -1407,7 +1406,7 @@ OrlanStrike.SeraphimButton = OrlanStrike.HolyPowerButton:CloneTo(
 
 function OrlanStrike.SeraphimButton:IsUsable(gameState)
 	return (gameState.HolyPower >= 5) and 
-		OrlanStrike.Button.IsUsable(self, gameState);
+		self.OrlanStrike.Button.IsUsable(self, gameState);
 end;
 
 function OrlanStrike.SeraphimButton:GetReason(gameState)
@@ -1455,7 +1454,7 @@ OrlanStrike.FlashOfLightButton = OrlanStrike.HealthButton:CloneTo(
 });
 
 function OrlanStrike.FlashOfLightButton:UpdateGameState(gameState)
-	OrlanStrike.HealthButton.UpdateGameState(self, gameState);
+	self.OrlanStrike.HealthButton.UpdateGameState(self, gameState);
 	gameState.HealthPercent = gameState.HealthPercent + 0.5;
 end;
 
@@ -1466,7 +1465,7 @@ OrlanStrike.LayOnHandsButton = OrlanStrike.HealthButton:CloneTo(
 });
 
 function OrlanStrike.LayOnHandsButton:UpdateGameState(gameState)
-	OrlanStrike.HealthButton.UpdateGameState(self, gameState);
+	self.OrlanStrike.HealthButton.UpdateGameState(self, gameState);
 	gameState.HealthPercent = 1;
 end;
 
@@ -1476,7 +1475,7 @@ OrlanStrike.SealOfTruthButton = OrlanStrike.SealButton:CloneTo(
 });
 
 function OrlanStrike.SealOfTruthButton:GetReason(gameState)
-	if (OrlanStrike.SealButton.GetReason(self, gameState) == 0) or gameState.HasSealOfTruth then
+	if (self.OrlanStrike.SealButton.GetReason(self, gameState) == 0) or gameState.HasSealOfTruth then
 		return 0;
 	elseif self.OrlanStrike:AreEmpoweredSealsKnown() then
 		local judgmentCooldownExpiration = self.OrlanStrike:GetCooldownExpiration(GetSpellCooldown(GetSpellInfo(20271)));
@@ -1497,7 +1496,7 @@ function OrlanStrike.SealOfTruthButton:GetReason(gameState)
 end;
 
 function OrlanStrike.SealOfTruthButton:UpdateGameState(gameState)
-	OrlanStrike.SealButton.UpdateGameState(self, gameState);
+	self.OrlanStrike.SealButton.UpdateGameState(self, gameState);
 	gameState.HasSealOfTruth = true;
 end;
 
@@ -1507,7 +1506,7 @@ OrlanStrike.SealOfRighteousnessButton = OrlanStrike.SealButton:CloneTo(
 });
 
 function OrlanStrike.SealOfRighteousnessButton:GetReason(gameState)
-	if (OrlanStrike.SealButton.GetReason(self, gameState) == 0) or gameState.HasSealOfRighteousness then
+	if (self.OrlanStrike.SealButton.GetReason(self, gameState) == 0) or gameState.HasSealOfRighteousness then
 		return 0;
 	elseif self.OrlanStrike:AreEmpoweredSealsKnown() then
 		local judgmentCooldownExpiration = self.OrlanStrike:GetCooldownExpiration(GetSpellCooldown(GetSpellInfo(20271)));
@@ -1529,7 +1528,7 @@ function OrlanStrike.SealOfRighteousnessButton:GetReason(gameState)
 end;
 
 function OrlanStrike.SealOfRighteousnessButton:UpdateGameState(gameState)
-	OrlanStrike.SealButton.UpdateGameState(self, gameState);
+	self.OrlanStrike.SealButton.UpdateGameState(self, gameState);
 	gameState.HasSealOfRighteousness = true;
 end;
 
@@ -1540,7 +1539,7 @@ OrlanStrike.CleanseButton = OrlanStrike.Button:CloneTo(
 });
 
 function OrlanStrike.CleanseButton:IsUsable(gameState)
-	return OrlanStrike.Button.IsUsable(self, gameState) and self.OrlanStrike.HasDispellableDebuff;
+	return self.OrlanStrike.Button.IsUsable(self, gameState) and self.OrlanStrike.HasDispellableDebuff;
 end;
 
 function OrlanStrike.CleanseButton:UpdateDisplay(window, gameState)
@@ -1570,7 +1569,7 @@ function OrlanStrike.WordOfGloryButton:GetReason(gameState)
 end;
 
 function OrlanStrike.WordOfGloryButton:UpdateGameState(gameState)
-	OrlanStrike.HolyPowerButton.UpdateGameState(self, gameState);
+	self.OrlanStrike.HolyPowerButton.UpdateGameState(self, gameState);
 	gameState.HealthPercent = 1;
 end;
 
@@ -1589,7 +1588,7 @@ function OrlanStrike.HarshWordButton:SetupButton()
 end;
 
 function OrlanStrike.HarshWordButton:IsUsable(gameState)
-	return OrlanStrike.HolyPowerButton.IsUsable(self, gameState) and
+	return self.OrlanStrike.HolyPowerButton.IsUsable(self, gameState) and
 		UnitCanAttack("player", "target") and
 		self.OrlanStrike:HasGlyph(54938); -- Glyph of Harsh Words
 end;
