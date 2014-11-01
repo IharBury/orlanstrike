@@ -298,6 +298,25 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
+			self.VariableButton:CloneTo(
+			{
+				Row = 3,
+				Column = 3,
+				Choices =
+				{
+					self.Button:CloneTo(
+					{
+						SpellId = 20066, -- Repentance
+						DoesRequireTarget = true
+					}),
+					self.Button:CloneTo(
+					{
+						SpellId = 115750 -- Blinding Light
+					})
+				}
+			})),
+		self:CreateButton(
+			castWindow, 
 			self.Button:CloneTo(
 			{
 				Row = 3,
@@ -1118,7 +1137,7 @@ function OrlanStrike.Button:IsUsable(gameState)
 	return self:IsAvailable() and 
 		(self:GetCooldownExpiration() <= gameState.Time) and
 		(not self:IsLackingMana()) and
-		((not self.DoesRequireTarget) or
+		((not self:DoesRequireTargetCore()) or
 			(not UnitCanAttack("player", "target")) or
 			(IsSpellInRange(GetSpellInfo(self:GetSpellId()), "target") == 1));
 end;
@@ -1141,6 +1160,10 @@ end;
 
 function OrlanStrike.Button:IsEmpty()
 	return self:GetSpellId() == nil;
+end;
+
+function OrlanStrike.Button:DoesRequireTargetCore()
+	return self.DoesRequireTarget;
 end;
 
 function OrlanStrike.Button:GetSpellId()
@@ -1737,14 +1760,29 @@ function OrlanStrike.VariableButton:UpdateSpells()
 	table.foreach(
 		self.Choices,
 		function (index, choice)
+			choice.OrlanStrike = self.OrlanStrike;
+			choice.Spell = self.Spell;
+			choice.Background = self.Background;
+			choice.Text = self.Text;
 			if IsSpellKnown(choice:GetSpellId()) then
 				activeChoice = choice;
 			end;
 		end);
 
-	self.ActiveChoice = activeChoice;
+	self.ActiveChoice = activeChoice;	
 
 	self:SetupButton();
+	if self.ActiveChoice then
+		self.ActiveChoice:UpdateSpells();
+	end;
+end;
+
+function OrlanStrike.VariableButton:SetupButton()
+	if self.ActiveChoice then
+		self.ActiveChoice:SetupButton();
+		return;
+	end;
+	OrlanStrike.Button.SetupButton(self);
 end;
 
 function OrlanStrike.VariableButton:IsUsable(gameState)
@@ -1790,9 +1828,23 @@ function OrlanStrike.VariableButton:IsLackingMana()
 	return false;
 end;
 
+function OrlanStrike.VariableButton:IsEmpty()
+	if self.ActiveChoice then
+		return self.ActiveChoice:IsEmpty();
+	end;
+	return true;
+end;
+
 function OrlanStrike.VariableButton:IsAvailable()
 	if self.ActiveChoice then
 		return self.ActiveChoice:IsAvailable();
+	end;
+	return false;
+end;
+
+function OrlanStrike.VariableButton:DoesRequireTargetCore()
+	if self.ActiveChoice then
+		return self.ActiveChoice:DoesRequireTargetCore();
 	end;
 	return false;
 end;
