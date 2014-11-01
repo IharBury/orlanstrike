@@ -1,4 +1,4 @@
-﻿OrlanStrike = {};
+OrlanStrike = {};
 
 SLASH_ORLANSTRIKE1 = "/orlanstrike";
 SLASH_ORLANSTRIKE2 = "/os";
@@ -29,7 +29,7 @@ function OrlanStrike:Initialize(configName)
 	self.EventFrame = CreateFrame("Frame");
 	self.ButtonSize = 32;
 	self.ButtonSpacing = 5;
-	self.RowCount = 5;
+	self.RowCount = 6;
 	self.ColumnCount = 5;
 	self.CastWindowHeight = self.ButtonSize * self.RowCount + self.ButtonSpacing * (self.RowCount + 1);
 	self.CastWindowWidth = self.ButtonSize * self.ColumnCount + self.ButtonSpacing * (self.ColumnCount + 1);
@@ -275,6 +275,13 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
+			self.PotButton:CloneTo(
+			{
+				Row = 3,
+				Column = 0
+			})),
+		self:CreateButton(
+			castWindow, 
 			self.HolyAvengerButton:CloneTo(
 			{
 				Row = 2,
@@ -291,28 +298,28 @@ function OrlanStrike:CreateCastWindow()
 			castWindow, 
 			self.CleanseButton:CloneTo(
 			{
-				Row = 3,
+				Row = 4,
 				Column = 0
 			})),
 		self:CreateButton(
 			castWindow, 
 			self.WordOfGloryButton:CloneTo(
 			{
-				Row = 3,
+				Row = 4,
 				Column = 1
 			})),
 		self:CreateButton(
 			castWindow, 
 			self.FlashOfLightButton:CloneTo(
 			{
-				Row = 3,
+				Row = 4,
 				Column = 2
 			})),
 		self:CreateButton(
 			castWindow, 
 			self.LayOnHandsButton:CloneTo(
 			{
-				Row = 3,
+				Row = 4,
 				Column = 3
 			})),
 		self:CreateButton(
@@ -320,7 +327,7 @@ function OrlanStrike:CreateCastWindow()
 			self.HealthButton:CloneTo(
 			{
 				SpellId = 642, -- Divine Shield
-				Row = 3,
+				Row = 4,
 				Column = 4
 			})),
 		self:CreateButton(
@@ -342,7 +349,7 @@ function OrlanStrike:CreateCastWindow()
 			self.Button:CloneTo(
 			{
 				SpellId = 114039, -- Hand of Purity
-				Row = 4,
+				Row = 5,
 				Column = 0,
 				Target = "player"
 			})),
@@ -351,7 +358,7 @@ function OrlanStrike:CreateCastWindow()
 			self.HealthButton:CloneTo(
 			{
 				SpellId = 20925, -- Sacred Shield
-				Row = 4,
+				Row = 5,
 				Column = 1,
 				Target = "player"
 			})),
@@ -360,7 +367,7 @@ function OrlanStrike:CreateCastWindow()
 			self.Button:CloneTo(
 			{
 				SpellId = 498, -- Divine Protection
-				Row = 4,
+				Row = 5,
 				Column = 2,
 				Target = "player"
 			})),
@@ -369,7 +376,7 @@ function OrlanStrike:CreateCastWindow()
 			self.Button:CloneTo(
 			{
 				SpellId = 1022, -- Hand of Protection
-				Row = 4,
+				Row = 5,
 				Column = 4
 			})),
 		self:CreateButton(
@@ -390,7 +397,7 @@ function OrlanStrike:CreateCastWindow()
 			castWindow,
 			self.SelfWeaponsOfTheLightButton:CloneTo(
 			{
-				Row = 4,
+				Row = 5,
 				Column = 3
 			})),
 		self:CreateButton(
@@ -408,7 +415,7 @@ function OrlanStrike:CreateCastWindow()
 				Column = 2
 			}))
 	};
-	self.SpellCount = 25;
+	self.SpellCount = 30;
 
 	castWindow.HolyPowerBar = castWindow:CreateTexture();
 	castWindow.HolyPowerBar:SetPoint("BOTTOMLEFT", castWindow, "TOPLEFT", 0, 0);
@@ -1271,6 +1278,42 @@ OrlanStrike.AvengingWrathButton = OrlanStrike.BurstButton:CloneTo(
 function OrlanStrike.AvengingWrathButton:UpdateGameState(gameState)
 	self.OrlanStrike.BurstButton.UpdateGameState(self, gameState);
 	gameState.AvengingWrathExpirationTime = gameState.Time + 20;
+end;
+
+OrlanStrike.PotButton = OrlanStrike.BurstButton:CloneTo(
+{
+	SpellId = 156428, -- Draenic Strength Potion
+	ItemId = 109219 -- Draenic Strength Potion
+});
+
+function OrlanStrike.PotButton:UpdateDisplay(window, gameState)
+	self.OrlanStrike.BurstButton.UpdateDisplay(self, window, gameState);
+
+	if not self:IsAvailable() then
+		self.OrlanStrike:SetBorderColor(window, 0, 1, 1, 1);
+		window:SetAlpha(0.4);
+	end;
+end;
+
+function OrlanStrike.PotButton:SetupButton()
+	self.Spell:SetAttribute("type", "macro");
+	self.Spell:SetAttribute("macrotext", "/use " .. GetItemInfo(self.ItemId));
+end;
+
+function OrlanStrike.PotButton:GetCooldown()
+	return GetItemCooldown(self.ItemId);
+end;
+
+function OrlanStrike.PotButton:IsLearned()
+	return true;
+end;
+
+function OrlanStrike.PotButton:IsAvailable()
+	return GetItemCount(self.ItemId) > 0;
+end;
+
+function OrlanStrike.PotButton:IsLackingMana()
+	return false;
 end;
 
 OrlanStrike.WeaponsOfTheLightButton = OrlanStrike.BurstButton:CloneTo(
