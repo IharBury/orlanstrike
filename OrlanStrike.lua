@@ -43,7 +43,7 @@ function OrlanStrike:Initialize(configName)
 			orlanStrike:HandleTalentChange();
 		elseif (event == "UNIT_SPELLCAST_START") and (arg1 == "player") then
 			orlanStrike:HandleAbilityUse(arg5);
-		elseif (event == "SPELLS_CHANGED") then
+		elseif (event == "SPELLS_CHANGED") or (event == "PLAYER_EQUIPMENT_CHANGED") then
 			orlanStrike:UpdateSpells();
 		end;
 	end;
@@ -279,6 +279,22 @@ function OrlanStrike:CreateCastWindow()
 			{
 				Row = 3,
 				Column = 0
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.SlotButton:CloneTo(
+			{
+				Row = 3,
+				Column = 1,
+				SlotName = "Trinket0Slot"
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.SlotButton:CloneTo(
+			{
+				Row = 3,
+				Column = 2,
+				SlotName = "Trinket1Slot"
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -543,6 +559,7 @@ function OrlanStrike:HandleLoaded()
 	self.EventFrame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED");
 	self.EventFrame:RegisterEvent("UNIT_SPELLCAST_START");
 	self.EventFrame:RegisterEvent("SPELLS_CHANGED");
+	self.EventFrame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED");
 
 	local orlanStrike = self;
 	self.ElapsedAfterUpdate = 0;
@@ -990,7 +1007,7 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 end;
 
 function OrlanStrike:UpdateButtonCooldown(button)
-	if button:GetSpellId() then
+	if not button:IsEmpty() then
 		local start, duration, enabled = button:GetCooldown();
 		local expirationTime;
 		if start and duration and (enabled == 1) then
@@ -1114,13 +1131,20 @@ function OrlanStrike.Button:UpdateDisplay(window, gameState)
 	end;
 end;
 
+function OrlanStrike.Button:IsEmpty()
+	return self:GetSpellId() == nil;
+end;
+
 function OrlanStrike.Button:GetSpellId()
 	return self.SpellId;
 end;
 
 function OrlanStrike.Button:UpdateSpells()
-	local _, _, icon = GetSpellInfo(self:GetSpellId());
-	self.Background:SetTexture(icon);
+	if self:GetSpellId() then
+		local _, _, icon = GetSpellInfo(self:GetSpellId());
+		self.Background:SetTexture(icon);
+	end;
+
 	if self.Target == "player" then
 		self.Text:SetText("self");
 	else
@@ -1280,6 +1304,40 @@ function OrlanStrike.AvengingWrathButton:UpdateGameState(gameState)
 	gameState.AvengingWrathExpirationTime = gameState.Time + 20;
 end;
 
+OrlanStrike.SlotButton = OrlanStrike.BurstButton:CloneTo({});
+
+function OrlanStrike.SlotButton:SetupButton()
+	self.Spell:SetAttribute("type", "item");
+	self.Spell:SetAttribute("item", GetInventorySlotInfo(self.SlotName));
+end;
+
+function OrlanStrike.SlotButton:UpdateSpells()
+	local slotId, texture = GetInventorySlotInfo(self.SlotName);
+	texture = GetInventoryItemTexture("player", slotId) or texture;
+	self.Background:SetTexture(texture);
+end;
+
+function OrlanStrike.SlotButton:GetCooldown()
+	return GetInventoryItemCooldown("player", GetInventorySlotInfo(self.SlotName));
+end;
+
+function OrlanStrike.SlotButton:IsLearned()
+	return true;
+end;
+
+function OrlanStrike.SlotButton:IsAvailable()
+	local _, _, enabled = GetInventoryItemCooldown("player", GetInventorySlotInfo(self.SlotName));
+	return enabled == 1;
+end;
+
+function OrlanStrike.SlotButton:IsLackingMana()
+	return false;
+end;
+
+function OrlanStrike.SlotButton:IsEmpty()
+	return false;
+end;
+
 OrlanStrike.PotButton = OrlanStrike.BurstButton:CloneTo(
 {
 	SpellId = 156428, -- Draenic Strength Potion
@@ -1288,6 +1346,8 @@ OrlanStrike.PotButton = OrlanStrike.BurstButton:CloneTo(
 
 function OrlanStrike.PotButton:UpdateDisplay(window, gameState)
 	self.OrlanStrike.BurstButton.UpdateDisplay(self, window, gameState);
+
+	window.Text:SetText(tostring(GetItemCount(self.ItemId)));
 
 	if not self:IsAvailable() then
 		self.OrlanStrike:SetBorderColor(window, 0, 1, 1, 1);
@@ -1322,9 +1382,6 @@ OrlanStrike.WeaponsOfTheLightButton = OrlanStrike.BurstButton:CloneTo(
 });
 
 function OrlanStrike.WeaponsOfTheLightButton:SetupButton()
-	local _, _, icon = GetSpellInfo(self:GetSpellId());
-	self.Background:SetTexture(icon);
-
 	self.Spell:SetAttribute("type", "macro");
 	self.Spell:SetAttribute("macrotext", "/cast " .. GetSpellInfo(self:GetSpellId()));
 end;
@@ -1492,9 +1549,6 @@ OrlanStrike.SelfWeaponsOfTheLightButton = OrlanStrike.HealthButton:CloneTo(
 });
 
 function OrlanStrike.SelfWeaponsOfTheLightButton:SetupButton()
-	local _, _, icon = GetSpellInfo(self:GetSpellId());
-	self.Background:SetTexture(icon);
-
 	self.Spell:SetAttribute("type", "macro");
 	self.Spell:SetAttribute("macrotext", "/cast [target=player] " .. GetSpellInfo(self:GetSpellId()));
 end;
@@ -1632,9 +1686,6 @@ OrlanStrike.HarshWordButton = OrlanStrike.HolyPowerButton:CloneTo(
 });
 
 function OrlanStrike.HarshWordButton:SetupButton()
-	local _, _, icon = GetSpellInfo(self:GetSpellId());
-	self.Background:SetTexture(icon);
-
 	self.Spell:SetAttribute("type", "macro");
 	self.Spell:SetAttribute("macrotext", "/cast " .. GetSpellInfo(self:GetSpellId()));
 end;
