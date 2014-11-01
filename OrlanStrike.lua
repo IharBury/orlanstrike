@@ -1387,8 +1387,13 @@ function OrlanStrike.PotButton:UpdateDisplay(window, gameState)
 end;
 
 function OrlanStrike.PotButton:SetupButton()
-	self.Spell:SetAttribute("type", "item");
-	self.Spell:SetAttribute("item", self.ItemId);
+	if GetItemInfo(self.ItemId) then
+		self.Spell:SetAttribute("type", "macro");
+		self.Spell:SetAttribute("macrotext", "/use " .. GetItemInfo(self.ItemId));
+	else
+		local button = self;
+		C_Timer.After(1, function() OrlanStrike.PotButton.SetupButton(button); end);
+	end;
 end;
 
 function OrlanStrike.PotButton:GetCooldown()
