@@ -298,6 +298,14 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
+			self.Button:CloneTo(
+			{
+				Row = 3,
+				Column = 4,
+				SpellId = 853 -- Hammer of Justice
+			})),
+		self:CreateButton(
+			castWindow, 
 			self.HolyAvengerButton:CloneTo(
 			{
 				Row = 2,
