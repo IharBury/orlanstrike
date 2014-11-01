@@ -1387,8 +1387,8 @@ function OrlanStrike.PotButton:UpdateDisplay(window, gameState)
 end;
 
 function OrlanStrike.PotButton:SetupButton()
-	self.Spell:SetAttribute("type", "macro");
-	self.Spell:SetAttribute("macrotext", "/use " .. GetItemInfo(self.ItemId));
+	self.Spell:SetAttribute("type", "item");
+	self.Spell:SetAttribute("item", self.ItemId);
 end;
 
 function OrlanStrike.PotButton:GetCooldown()
