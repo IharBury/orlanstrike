@@ -58,7 +58,7 @@ function OrlanStrike:Initialize(configName)
 	{
 		[879] = true, -- Exorcism
 		[20271] = true, -- Judgment
-		[23275] = true, -- Hammer of Wrath
+		[24275] = true, -- Hammer of Wrath
 		[35395] = true, -- Crusader Strike
 		[53595] = true -- Hammer of the Righteous
 	};
@@ -254,13 +254,10 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.HolyPowerGeneratorButton:CloneTo(
+			self.HammerOfWrathButton:CloneTo(
 			{
-				SpellId = 24275, -- Hammer of Wrath
 				Row = 1,
-				Column = 2,
-				CooldownLength = 6,
-				DoesRequireTarget = true
+				Column = 2
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -1210,6 +1207,18 @@ function OrlanStrike.HolyPowerGeneratorButton:UpdateGameState(gameState)
 	if gameState.HolyPower > maxHolyPower then
 		gameState.HolyPower = maxHolyPower;
 	end;
+end;
+
+OrlanStrike.HammerOfWrathButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
+{
+	SpellId = 24275, -- Hammer of Wrath
+	CooldownLength = 6,
+	DoesRequireTarget = true
+});
+
+function OrlanStrike.HammerOfWrathButton:SetupButton()
+	self.Spell:SetAttribute("type", "macro");
+	self.Spell:SetAttribute("macrotext", "/cast " .. GetSpellInfo(self:GetSpellId()));
 end;
 
 OrlanStrike.JudgmentButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
