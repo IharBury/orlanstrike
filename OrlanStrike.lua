@@ -1633,13 +1633,13 @@ function OrlanStrike.SealOfTruthButton:GetReason(gameState)
 		if not gameState.HasSealOfRighteousness then
 			return 3;
 		elseif gameState:HasLiadrinsRighteousness() and 
-			(gameState.LiadrinsRighteousnessExpirationTime - gameState.Time >= 15) and
+			(gameState.LiadrinsRighteousnessExpirationTime - gameState.Time >= 12) and
 			((not gameState:HasMaraadsTruth()) or (gameState.MaraadsTruthExpirationTime - gameState.Time < 2)) and
-			(judgmentCooldownExpiration - gameState.Time < 2) then
+			(judgmentCooldownExpiration - gameState.Time < 1) then
 			return 3;
 		elseif gameState:HasLiadrinsRighteousness() and
 			(gameState.LiadrinsRighteousnessExpirationTime - gameState.Time >= 
-				8 + math.max(judgmentCooldownExpiration - gameState.Time - 1.5, 0)) then
+				8 + math.max(judgmentCooldownExpiration - gameState.Time - 1, 0)) then
 			return 2;
 		end;
 	end;
@@ -1667,11 +1667,11 @@ function OrlanStrike.SealOfRighteousnessButton:GetReason(gameState)
 			(gameState.MaraadsTruthExpirationTime - gameState.Time >= 12) and
 			((not gameState:HasLiadrinsRighteousness()) or 
 				(gameState.LiadrinsRighteousnessExpirationTime - gameState.Time < 2)) and
-			(judgmentCooldownExpiration - gameState.Time < 2) then
+			(judgmentCooldownExpiration - gameState.Time < 1) then
 			return 3;
 		elseif gameState:HasMaraadsTruth() and
 			(gameState.MaraadsTruthExpirationTime - gameState.Time >= 
-				8 + math.max(judgmentCooldownExpiration - gameState.Time - 1.5, 0)) then
+				8 + math.max(judgmentCooldownExpiration - gameState.Time - 1, 0)) then
 			return 2;
 		end;
 	end;
