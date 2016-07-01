@@ -89,6 +89,9 @@ function OrlanStrike:Initialize(configName)
 	self.MultiTargetPriorities =
 	{
 		{
+			SpellId = 205228 -- Consecration
+		},
+		{
 			SpellId = 184575, -- Blade of Justice
 			MinReason = 3
 		},
@@ -312,6 +315,10 @@ function OrlanStrike:CreateCastWindow()
 					{
 						SpellId = 213757, -- Execution Sentence
 						DoesRequireTarget = true
+					}),
+					self.Button:CloneTo(
+					{
+						SpellId = 205228 -- Consecration
 					})
 				}
 			}))
