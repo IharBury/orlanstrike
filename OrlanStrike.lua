@@ -700,6 +700,11 @@ function OrlanStrike:GetCurrentGameState()
 			return self.AvengingWrathExpirationTime and
 				self.AvengingWrathExpirationTime > self.Time;
 		end,
+		TheFiresOfJusticeExpirationTime = select(7, UnitBuff("player", GetSpellInfo(209785))),
+		HasTheFiresOfJustice = function(self)
+			return self.TheFiresOfJusticeExpirationTime and
+				self.TheFiresOfJusticeExpirationTime > self.Time;
+		end,
 		HealthPercent = self.HealthPercent
 	};
 
@@ -1162,10 +1167,15 @@ end;
 function OrlanStrike.HolyPowerButton:UpdateGameState(gameState)
 	self.OrlanStrike.Button.UpdateGameState(self, gameState);
 
-	if gameState.HolyPower < 3 then
+	local cost = 3;
+	if gameState:HasTheFiresOfJustice() then
+		cost = 2;
+	end;
+
+	if gameState.HolyPower < cost then
 		gameState.HolyPower = 0;
 	else
-		gameState.HolyPower = gameState.HolyPower - 3;
+		gameState.HolyPower = gameState.HolyPower - cost;
 	end;
 end;
 
@@ -1192,6 +1202,7 @@ function OrlanStrike.ThreeHolyPowerButton:GetReason(gameState)
 		return 0;
 	elseif self.OrlanStrike:IsAvengingWrathEnding(gameState) or
 			isAtMaxHolyPower or
+			gameState:HasTheFiresOfJustice() or
 			(isAlmostAtMaxHolyPower and
 				(canCastBladeOfJusticeAfter or judgementDebuffWillExpire)) then
 		return 2;
