@@ -68,6 +68,10 @@ function OrlanStrike:Initialize(configName)
 			MinReason = 2
 		},
 		{
+			SpellId = 213757, -- Execution Sentence
+			MinReason = 2
+		},
+		{
 			SpellId = 85256, -- Templar's Verdict
 			MinReason = 2
 		},
@@ -168,7 +172,6 @@ function OrlanStrike:CreateCastWindow()
 				SpellId = 35395, -- Crusader Strike
 				Row = 0,
 				Column = 4,
-				CooldownLength = 4.5,
 				DoesRequireTarget = true,
 				SpellPower = 1
 			})),
@@ -179,7 +182,6 @@ function OrlanStrike:CreateCastWindow()
 				SpellId = 184575, -- Blade of Justice
 				Row = 0,
 				Column = 3,
-				CooldownLength = 8,
 				DoesRequireTarget = true,
 				SpellPower = 2
 			})),
@@ -297,6 +299,21 @@ function OrlanStrike:CreateCastWindow()
 			{
 				Row = 1,
 				Column = 4
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.VariableButton:CloneTo(
+			{
+				Row = 0,
+				Column = 0,
+				Choices =
+				{
+					self.ThreeHolyPowerButton:CloneTo(
+					{
+						SpellId = 213757, -- Execution Sentence
+						DoesRequireTarget = true
+					})
+				}
 			}))
 	};
 	self.SpellCount = 30;
@@ -806,14 +823,14 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 			if sharedCooldownSpellId and 
 					button and 
 					(button:GetSpellId() == sharedCooldownSpellId) and
-					firstSpellButton.CooldownLength then
+					firstSpellButton:GetCooldownLength() then
 				nextSpellCooldownExpirations[spellIndex] = minCooldownExpiration +
-					firstSpellButton.CooldownLength * self:GetHasteMultiplier();
+					firstSpellButton:GetCooldownLength();
 			end;
 		end;
-		if firstSpellButton.CooldownLength then
+		if firstSpellButton:GetCooldownLength() then
 			nextSpellCooldownExpirations[firstSpellIndex] = minCooldownExpiration +
-				firstSpellButton.CooldownLength * self:GetHasteMultiplier();
+				firstSpellButton:GetCooldownLength();
 		end;
 		nextGameState.Time = nextTime;
 
@@ -982,6 +999,14 @@ function OrlanStrike.Button:SetupButton()
 	end;
 end;
 
+function OrlanStrike.Button:GetCooldownLength()
+	local inMilliseconds = GetSpellBaseCooldown(self:GetSpellId());
+	if inMilliseconds then
+		return inMilliseconds / 1000.0 * self.OrlanStrike:GetHasteMultiplier();
+	end;
+	return nil;
+end;
+
 OrlanStrike.HolyPowerGeneratorButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.HolyPowerGeneratorButton:GetNewHolyPower(gameState)
@@ -1015,7 +1040,6 @@ end;
 OrlanStrike.JudgmentButton = OrlanStrike.Button:CloneTo(
 {
 	SpellId = 20271,
-	CooldownLength = 12,
 	DoesRequireTarget = true
 });
 
@@ -1368,6 +1392,13 @@ end;
 function OrlanStrike.VariableButton:GetSharedCooldownSpellId()
 	if self.ActiveChoice then
 		return self.ActiveChoice:GetSharedCooldownSpellId();
+	end;
+	return nil;
+end;
+
+function OrlanStrike.VariableButton:GetCooldownLength()
+	if self.ActiveChoice then
+		return self.ActiveChoice:GetCooldownLength();
 	end;
 	return nil;
 end;
