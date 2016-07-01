@@ -250,7 +250,8 @@ function OrlanStrike:CreateCastWindow()
 			{
 				Row = 3,
 				Column = 4,
-				SpellId = 853 -- Hammer of Justice
+				SpellId = 853, -- Hammer of Justice
+				DoesRequireTarget = true
 			})),
 		self:CreateButton(
 			castWindow, 
