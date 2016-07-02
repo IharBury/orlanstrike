@@ -339,6 +339,14 @@ function OrlanStrike:CreateCastWindow()
 						SpellId = 205191 -- Eye for an Eye
 					})
 				}
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.BurstButton:CloneTo(
+			{
+				Row = 2,
+				Column = 3,
+				SpellId = 184662
 			}))
 	};
 	self.SpellCount = 30;
