@@ -350,7 +350,14 @@ function OrlanStrike:CreateCastWindow()
 			{
 				Row = 2,
 				Column = 3,
-				SpellId = 184662
+				SpellId = 184662 -- Shield of Vengeance
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.HolyWrathButton:CloneTo(
+			{
+				Row = 3,
+				Column = 3
 			}))
 	};
 	self.SpellCount = 30;
@@ -1552,6 +1559,19 @@ function OrlanStrike.JusticarsVengeanceButton:UpdateGameState(gameState)
 	else
 		gameState.HolyPower = gameState.HolyPower - cost;
 	end;
+end;
+
+OrlanStrike.HolyWrathButton = OrlanStrike.BurstButton:CloneTo(
+{
+	SpellId = 210220
+});
+
+function OrlanStrike.HolyWrathButton:GetReason(gameState)
+	if gameState.HealthPercent > 0.5 then
+		return 0;
+	end;
+
+	return OrlanStrike.BurstButton.GetReason(self, gameState);
 end;
 
 OrlanStrike:Initialize("OrlanStrikeConfig");
