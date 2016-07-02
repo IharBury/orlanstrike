@@ -129,6 +129,9 @@ function OrlanStrike:Initialize(configName)
 		},
 		{
 			SpellId = 642 -- Divine Shield
+		},
+		{
+			SpellId = 210191 -- Word of Glory
 		}
 	};
 end;
@@ -202,31 +205,31 @@ function OrlanStrike:CreateCastWindow()
 			castWindow, 
 			self.PotButton:CloneTo(
 			{
-				Row = 3,
+				Row = 1,
 				Column = 0
 			})),
 		self:CreateButton(
 			castWindow, 
 			self.SlotButton:CloneTo(
 			{
-				Row = 3,
-				Column = 1,
+				Row = 2,
+				Column = 0,
 				SlotName = "Trinket0Slot"
 			})),
 		self:CreateButton(
 			castWindow, 
 			self.SlotButton:CloneTo(
 			{
-				Row = 3,
-				Column = 2,
+				Row = 2,
+				Column = 1,
 				SlotName = "Trinket1Slot"
 			})),
 		self:CreateButton(
 			castWindow, 
 			self.VariableButton:CloneTo(
 			{
-				Row = 3,
-				Column = 3,
+				Row = 2,
+				Column = 4,
 				Choices =
 				{
 					self.Button:CloneTo(
@@ -244,8 +247,8 @@ function OrlanStrike:CreateCastWindow()
 			castWindow, 
 			self.Button:CloneTo(
 			{
-				Row = 3,
-				Column = 4,
+				Row = 1,
+				Column = 3,
 				SpellId = 853, -- Hammer of Justice
 				DoesRequireTarget = true
 			})),
@@ -253,7 +256,7 @@ function OrlanStrike:CreateCastWindow()
 			castWindow, 
 			self.AvengingWrathButton:CloneTo(
 			{
-				Row = 2,
+				Row = 1,
 				Column = 1
 			})),
 		self:CreateButton(
@@ -316,6 +319,20 @@ function OrlanStrike:CreateCastWindow()
 					self.Button:CloneTo(
 					{
 						SpellId = 205228 -- Consecration
+					})
+				}
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.VariableButton:CloneTo(
+			{
+				Row = 2,
+				Column = 2,
+				Choices =
+				{
+					self.WordOfGloryButton:CloneTo(
+					{
+						SpellId = 210191 -- Word of Glory
 					})
 				}
 			}))
@@ -1245,6 +1262,19 @@ OrlanStrike.DivineStormButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
 {
 	SpellId = 53385
 });
+
+OrlanStrike.WordOfGloryButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
+{
+	SpellId = 210191
+});
+
+function OrlanStrike.WordOfGloryButton:GetReason(gameState)
+	if (gameState.HealthPercent <= 0.2) and 
+		(self.OrlanStrike.ThreeHolyPowerButton.GetReason(self, gameState) > 0) then
+		return 1;
+	end;
+	return 0;
+end;
 
 OrlanStrike.HealthButton = OrlanStrike.Button:CloneTo({});
 
