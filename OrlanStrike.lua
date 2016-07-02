@@ -692,6 +692,11 @@ function OrlanStrike:GetCurrentGameState()
 		CloneTo = self.CloneTo,
 		HolyPower = UnitPower("player", SPELL_POWER_HOLY_POWER), 
 		Time = self.GcdExpiration,
+		DivinePurposeExpirationTime = select(7, UnitBuff("player", GetSpellInfo(223819))),
+		HasDivinePurpose = function(self)
+			return self.DivinePurposeExpirationTime and
+				self.DivinePurposeExpirationTime > self.Time;
+		end,
 		AvengingWrathExpirationTime = select(7, UnitBuff("player", GetSpellInfo(31884))),
 		HasAvengingWrath = function(self)
 			return self.AvengingWrathExpirationTime and
@@ -1176,18 +1181,46 @@ function OrlanStrike.PotButton:IsLackingMana()
 	return false;
 end;
 
-OrlanStrike.HolyPowerButton = OrlanStrike.Button:CloneTo({});
+OrlanStrike.HolyPowerScalingButton = OrlanStrike.Button:CloneTo({});
 
-function OrlanStrike.HolyPowerButton:IsLackingMana()
+function OrlanStrike.HolyPowerScalingButton:IsLackingMana()
 	return false;
 end;
 
-function OrlanStrike.HolyPowerButton:IsUsable(gameState)
+function OrlanStrike.HolyPowerScalingButton:IsUsable(gameState)
 	return self.OrlanStrike.Button.IsUsable(self, gameState) and 
 		(gameState.HolyPower > 0);
 end;
 
-function OrlanStrike.HolyPowerButton:UpdateGameState(gameState)
+function OrlanStrike.HolyPowerScalingButton:UpdateGameState(gameState)
+	self.OrlanStrike.Button.UpdateGameState(self, gameState);
+
+	gameState.HolyPower = 0;
+end;
+
+OrlanStrike.ThreeHolyPowerButton = OrlanStrike.Button:CloneTo({});
+
+function OrlanStrike.ThreeHolyPowerButton:IsLackingMana()
+	return false;
+end;
+
+function OrlanStrike.ThreeHolyPowerButton:IsUsable(gameState)
+	if not self.OrlanStrike.Button.IsUsable(self, gameState) then
+		return false;
+	end;
+
+	if gameState:HasDivinePurpose() then
+		return true;
+	end;
+
+	local cost = 3;
+	if gameState:HasTheFiresOfJustice() then
+		cost = cost - 1;
+	end;
+	return gameState.HolyPower >= cost;
+end;
+
+function OrlanStrike.ThreeHolyPowerButton:UpdateGameState(gameState)
 	self.OrlanStrike.Button.UpdateGameState(self, gameState);
 
 	local cost = 3;
@@ -1200,17 +1233,6 @@ function OrlanStrike.HolyPowerButton:UpdateGameState(gameState)
 	else
 		gameState.HolyPower = gameState.HolyPower - cost;
 	end;
-end;
-
-OrlanStrike.ThreeHolyPowerButton = OrlanStrike.HolyPowerButton:CloneTo({});
-
-function OrlanStrike.ThreeHolyPowerButton:IsUsable(gameState)
-	local cost = 3;
-	if gameState:HasTheFiresOfJustice() then
-		cost = cost - 1;
-	end;
-	return (gameState.HolyPower >= cost) and 
-		self.OrlanStrike.Button.IsUsable(self, gameState);
 end;
 
 OrlanStrike.TemplarsVerdictButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
