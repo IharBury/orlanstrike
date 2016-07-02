@@ -1152,6 +1152,11 @@ function OrlanStrike.Button:UpdateDisplay(window, gameState)
 	if not self:IsUsable(gameState) then
 		window:SetAlpha(0.1);
 	end;
+
+	local charges, maxCharges = GetSpellCharges(GetSpellInfo(self:GetSpellId()));
+	if charges and maxCharges and (maxCharges > 1) then
+		window.Text:SetText(tostring(charges));
+	end;
 end;
 
 function OrlanStrike.Button:IsEmpty()
