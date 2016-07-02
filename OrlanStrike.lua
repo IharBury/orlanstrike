@@ -58,26 +58,26 @@ function OrlanStrike:Initialize(configName)
 	{
 		{
 			SpellId = 184575, -- Blade of Justice
-			MinReason = 3
+			MinReason = 3 -- +2 holy power
 		},
 		{
 			SpellId = 20271 -- Judgment
 		},
 		{
 			SpellId = 35395, -- Crusader Strike
-			MinReason = 2
+			MinReason = 2 -- +1 holy power
 		},
 		{
 			SpellId = 213757, -- Execution Sentence
-			MinReason = 2
+			MinReason = 2 -- is urgent to spend holy power or burst ends
 		},
 		{
 			SpellId = 85256, -- Templar's Verdict
-			MinReason = 2
+			MinReason = 2 -- is urgent to spend holy power or burst ends
 		},
 		{
 			SpellId = 53385, -- Divine Storm
-			MinReason = 2
+			MinReason = 2 -- is urgent to spend holy power or burst ends
 		},
 		{
 			SpellId = 184575 -- Blade of Justice
@@ -89,26 +89,30 @@ function OrlanStrike:Initialize(configName)
 	self.MultiTargetPriorities =
 	{
 		{
+			SpellId = 184575, -- Blade of Justice
+			MinReason = 4 -- +2 holy power, Divine Hammer
+		},
+		{
 			SpellId = 205228 -- Consecration
 		},
 		{
 			SpellId = 184575, -- Blade of Justice
-			MinReason = 3
+			MinReason = 3 -- +2 holy power
 		},
 		{
 			SpellId = 20271 -- Judgment
 		},
 		{
 			SpellId = 35395, -- Crusader Strike
-			MinReason = 2
+			MinReason = 2 -- +1 holy power
 		},
 		{
 			SpellId = 53385, -- Divine Storm
-			MinReason = 2
+			MinReason = 2 -- is urgent to spend holy power or burst ends
 		},
 		{
 			SpellId = 85256, -- Templar's Verdict
-			MinReason = 2
+			MinReason = 2 -- is urgent to spend holy power or burst ends
 		},
 		{
 			SpellId = 184575 -- Blade of Justice
@@ -176,17 +180,14 @@ function OrlanStrike:CreateCastWindow()
 				Row = 0,
 				Column = 4,
 				DoesRequireTarget = true,
-				SpellPower = 1
+				HolyPower = 1
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.HolyPowerGeneratorButton:CloneTo(
+			self.BladeOfJusticeButton:CloneTo(
 			{
-				SpellId = 184575, -- Blade of Justice
 				Row = 0,
-				Column = 3,
-				DoesRequireTarget = true,
-				SpellPower = 2
+				Column = 3
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -1021,7 +1022,7 @@ end;
 OrlanStrike.HolyPowerGeneratorButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.HolyPowerGeneratorButton:GetNewHolyPower(gameState)
-	local newHolyPower = gameState.HolyPower + self.SpellPower;
+	local newHolyPower = gameState.HolyPower + self.HolyPower;
 	local maxHolyPower = UnitPowerMax("player", SPELL_POWER_HOLY_POWER);
 	if newHolyPower > maxHolyPower then
 		newHolyPower = maxHolyPower;
@@ -1046,6 +1047,34 @@ function OrlanStrike.HolyPowerGeneratorButton:GetReason(gameState)
 
 	local newHolyPower = self:GetNewHolyPower(gameState);
 	return (newHolyPower - gameState.HolyPower) + 1;
+end;
+
+OrlanStrike.BladeOfJusticeButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
+{
+	SpellId = 184575,
+	HolyPower = 2
+});
+
+function OrlanStrike.BladeOfJusticeButton:HasDivineHammerTalent()
+	local _, _, _, isTalentSelected, _, spellId = GetTalentInfo(4, 3, 1); -- Divine Hammer
+	return (spellId == 198034) and isTalentSelected; -- Divine Hammer
+end;
+
+function OrlanStrike.BladeOfJusticeButton:DoesRequireTargetCore()
+	return not self:HasDivineHammerTalent();
+end;
+
+-- 0 -- no reason
+-- 1 -- just damage
+-- 2 -- +1 holy power
+-- 3 -- +2 holy power, not Divine Hammer
+-- 4 -- +2 holy power, Divine Hammer
+function OrlanStrike.BladeOfJusticeButton:GetReason(gameState)
+	local baseReason = OrlanStrike.HolyPowerGeneratorButton.GetReason(self, gameState);
+	if (baseReason == 3) and self:HasDivineHammerTalent() then
+		return 4;
+	end;
+	return baseReason;
 end;
 
 OrlanStrike.JudgmentButton = OrlanStrike.Button:CloneTo(
