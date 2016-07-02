@@ -341,6 +341,30 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
+			self.GreaterBlessingButton:CloneTo(
+			{
+				SpellId = 203538, -- Greater Blessing of Kings
+				Row = 5,
+				Column = 2
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.GreaterBlessingButton:CloneTo(
+			{
+				SpellId = 203539, -- Greater Blessing of Wisdom
+				Row = 5,
+				Column = 3
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.GreaterBlessingButton:CloneTo(
+			{
+				SpellId = 203528, -- Greater Blessing of Might
+				Row = 5,
+				Column = 4
+			})),
+		self:CreateButton(
+			castWindow, 
 			self.RebukeButton:CloneTo(
 			{
 				Row = 1,
@@ -973,6 +997,61 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 	end;
 
 	return firstSpellIndex, nextSpellIndex;
+end;
+
+function OrlanStrike:GetRaidBuffCount(spellId)
+	local count = 0;
+	local duration = self:GetPlayerCastUnitBuffCooldown("player", spellId);
+	if duration and (duration ~= 0) then
+		count = count + 1;
+	end;
+
+	duration = self:GetPlayerCastUnitBuffCooldown("pet", spellId);
+	if duration and (duration ~= 0) then
+		count = count + 1;
+	end;
+
+	for i = 1, 4 do
+		duration = self:GetPlayerCastUnitBuffCooldown("party" .. i, spellId);
+		if duration and (duration ~= 0) then
+			count = count + 1;
+		end;
+
+		duration = self:GetPlayerCastUnitBuffCooldown("partypet" .. i, spellId);
+		if duration and (duration ~= 0) then
+			count = count + 1;
+		end;
+	end;
+
+	for i = 1, 40 do
+		duration = self:GetPlayerCastUnitBuffCooldown("raid" .. i, spellId);
+		if duration and (duration ~= 0) then
+			count = count + 1;
+		end;
+
+		duration = self:GetPlayerCastUnitBuffCooldown("raidpet" .. i, spellId);
+		if duration and (duration ~= 0) then
+			count = count + 1;
+		end;
+	end;
+
+	return count;
+end;
+
+function OrlanStrike:GetPlayerCastUnitBuffCooldown(unit, spellId)
+	local i = 1;
+	while true do
+		local _, _, _, count, _, duration, expirationTime, _, _, _, buffId = UnitBuff(unit, i, "PLAYER");
+		if not buffId then
+			return;
+		end;
+
+		if buffId == spellId then
+			return duration, expirationTime, count;
+		end;
+
+		i = i + 1;
+	end;
 end;
 
 function OrlanStrike:UpdateButtonCooldown(button)
@@ -1658,6 +1737,32 @@ function OrlanStrike.SealOfLightButton:UpdateDisplay(window, gameState)
 	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
 	window.Text:SetText(tostring(gameState.HolyPower));
+end;
+
+OrlanStrike.GreaterBlessingButton = OrlanStrike.Button:CloneTo({});
+
+function OrlanStrike.GreaterBlessingButton:UpdateDisplay(window, gameState)
+	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
+
+	window.Text:SetText(tostring(self.OrlanStrike:GetRaidBuffCount(self:GetSpellId())));
+
+	if self:GetReason(gameState) >= 2 then
+		window:SetAlpha(1);
+	end;
+end;
+
+function OrlanStrike.GreaterBlessingButton:GetReason(gameState)
+	if self.OrlanStrike.Button.GetReason(self, gameState) == 0 then
+		return 0;
+	end;
+
+	local greaterBlessingCount = self.OrlanStrike:GetRaidBuffCount(203538) + -- Greater Blessing of Kings
+		self.OrlanStrike:GetRaidBuffCount(203539) + -- Greater Blessing of Wisdom
+		self.OrlanStrike:GetRaidBuffCount(203528); -- Greater Blessing of Might
+	if greaterBlessingCount < 3 then
+		return 2;
+	end;
+	return 1;
 end;
 
 OrlanStrike:Initialize("OrlanStrikeConfig");
