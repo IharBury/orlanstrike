@@ -360,14 +360,15 @@ function OrlanStrike:CreateCastWindow()
 			castWindow, 
 			self.VariableButton:CloneTo(
 			{
-				Row = 3,
-				Column = 4,
+				Row = 5,
+				Column = 0,
 				Choices =
 				{
 					self.Button:CloneTo(
 					{
 						SpellId = 205656 -- Divine Steed
-					})
+					}),
+					self.SealOfLightButton:CloneTo({})
 				}
 			})),
 	};
@@ -1583,6 +1584,17 @@ function OrlanStrike.HolyWrathButton:GetReason(gameState)
 	end;
 
 	return OrlanStrike.BurstButton.GetReason(self, gameState);
+end;
+
+OrlanStrike.SealOfLightButton = OrlanStrike.Button:CloneTo(
+{
+	SpellId = 202273
+});
+
+function OrlanStrike.SealOfLightButton:UpdateDisplay(window, gameState)
+	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
+
+	window.Text:SetText(tostring(gameState.HolyPower));
 end;
 
 OrlanStrike:Initialize("OrlanStrikeConfig");
