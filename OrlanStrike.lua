@@ -64,10 +64,6 @@ function OrlanStrike:Initialize(configName)
 			SpellId = 20271 -- Judgment
 		},
 		{
-			SpellId = 35395, -- Crusader Strike
-			MinReason = 2 -- +1 holy power
-		},
-		{
 			SpellId = 213757, -- Execution Sentence
 			MinReason = 2 -- is urgent to spend holy power or burst ends
 		},
@@ -78,6 +74,10 @@ function OrlanStrike:Initialize(configName)
 		{
 			SpellId = 53385, -- Divine Storm
 			MinReason = 2 -- is urgent to spend holy power or burst ends
+		},
+		{
+			SpellId = 35395, -- Crusader Strike
+			MinReason = 2 -- +1 holy power
 		},
 		{
 			SpellId = 184575 -- Blade of Justice
@@ -103,16 +103,16 @@ function OrlanStrike:Initialize(configName)
 			SpellId = 20271 -- Judgment
 		},
 		{
-			SpellId = 35395, -- Crusader Strike
-			MinReason = 2 -- +1 holy power
-		},
-		{
 			SpellId = 53385, -- Divine Storm
 			MinReason = 2 -- is urgent to spend holy power or burst ends
 		},
 		{
 			SpellId = 85256, -- Templar's Verdict
 			MinReason = 2 -- is urgent to spend holy power or burst ends
+		},
+		{
+			SpellId = 35395, -- Crusader Strike
+			MinReason = 2 -- +1 holy power
 		},
 		{
 			SpellId = 184575 -- Blade of Justice
@@ -1210,29 +1210,35 @@ end;
 OrlanStrike.ThreeHolyPowerButton = OrlanStrike.HolyPowerButton:CloneTo({});
 
 function OrlanStrike.ThreeHolyPowerButton:IsUsable(gameState)
-	return (gameState.HolyPower >= 3) and 
+	local cost = 3;
+	if gameState:HasTheFiresOfJustice() then
+		cost = cost - 1;
+	end;
+	return (gameState.HolyPower >= cost) and 
 		self.OrlanStrike.Button.IsUsable(self, gameState);
 end;
 
 function OrlanStrike.ThreeHolyPowerButton:GetReason(gameState)
-	local bladeOfJusticeCooldownExpiration =
-		self.OrlanStrike:GetCooldownExpiration(GetSpellCooldown(GetSpellInfo(184575)));
 	local judgmentDebuffExpiration = select(7, UnitAura("target", GetSpellInfo(197277), "", "HARMFUL|PLAYER"));
-	local isAtMaxHolyPower = gameState.HolyPower == UnitPowerMax("player", SPELL_POWER_HOLY_POWER);
-	local isAlmostAtMaxHolyPower = gameState.HolyPower == UnitPowerMax("player", SPELL_POWER_HOLY_POWER) - 1;
-	local canCastBladeOfJusticeAfter = bladeOfJusticeCooldownExpiration - gameState.Time <=
-		0.5 + 1.5 * self.OrlanStrike:GetHasteMultiplier();
+	local isAlmostAtMaxHolyPower = gameState.HolyPower >= UnitPowerMax("player", SPELL_POWER_HOLY_POWER) - 1;
 	local judgementDebuffWillExpire = judgmentDebuffExpiration and
 		(judgmentDebuffExpiration > gameState.Time + 0.2) and
 		(judgmentDebuffExpiration <= gameState.Time + 0.5 + 1.5 * self.OrlanStrike:GetHasteMultiplier());
+	local crusaderStrikeCooldownExpiration =
+		self.OrlanStrike:GetCooldownExpiration(GetSpellCooldown(GetSpellInfo(35395)));
+	local canCastCrusaderStrikeInstead = crusaderStrikeCooldownExpiration - gameState.Time <= 0.2;
+	local bladeOfJusticeCooldownExpiration =
+		self.OrlanStrike:GetCooldownExpiration(GetSpellCooldown(GetSpellInfo(184575)));
+	local canCastBladeOfJusticeAfter = bladeOfJusticeCooldownExpiration - gameState.Time <=
+		0.2 + 1.5 * self.OrlanStrike:GetHasteMultiplier();
 
 	if self.OrlanStrike.HolyPowerButton.GetReason(self, gameState) == 0 then
 		return 0;
 	elseif self.OrlanStrike:IsAvengingWrathEnding(gameState) or
-			isAtMaxHolyPower or
+			isAlmostAtMaxHolyPower or
 			gameState:HasTheFiresOfJustice() or
-			(isAlmostAtMaxHolyPower and
-				(canCastBladeOfJusticeAfter or judgementDebuffWillExpire)) then
+			judgementDebuffWillExpire or
+			(canCastCrusaderStrikeInstead and canCastBladeOfJusticeAfter) then
 		return 2;
 	end;
 	return 1;
