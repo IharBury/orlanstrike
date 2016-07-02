@@ -877,22 +877,20 @@ function OrlanStrike:UpdateButtonCooldown(button)
 	if not button:IsEmpty() then
 		local start, duration, enabled = button:GetCooldown();
 		local expirationTime;
-		if start and duration and (enabled == 1) then
+		if start and (start ~= 0) and duration and (duration ~= 0) and (enabled == 1) then
 			expirationTime = start + duration;
 		else
-			start = nil;
-			duration = nil;
-			expirationTime = nil;
+			start = 0;
+			duration = 0;
+			expirationTime = 0;
 		end;
 
-		duration = duration or 0;
-		expirationTime = expirationTime or 0;
 		if expirationTime ~= button.Cooldown.Off then
 			button.Cooldown.Off = expirationTime;
 			if (duration ~= 0) and (expirationTime ~= 0) then
 				button.Cooldown:SetCooldown(expirationTime - duration, duration);
 			else
-				button.Cooldown:SetCooldown(GetTime() - 20, 10);
+				button.Cooldown:SetCooldown(GetTime() - 1, 1);
 			end;
 		end;
 	end;
