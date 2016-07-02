@@ -333,10 +333,7 @@ function OrlanStrike:CreateCastWindow()
 				Column = 2,
 				Choices =
 				{
-					self.WordOfGloryButton:CloneTo(
-					{
-						SpellId = 210191 -- Word of Glory
-					}),
+					self.WordOfGloryButton:CloneTo({}),
 					self.BurstButton:CloneTo(
 					{
 						SpellId = 205191 -- Eye for an Eye
@@ -358,7 +355,21 @@ function OrlanStrike:CreateCastWindow()
 			{
 				Row = 3,
 				Column = 3
-			}))
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.VariableButton:CloneTo(
+			{
+				Row = 3,
+				Column = 4,
+				Choices =
+				{
+					self.Button:CloneTo(
+					{
+						SpellId = 205656 -- Divine Steed
+					})
+				}
+			})),
 	};
 	self.SpellCount = 30;
 
