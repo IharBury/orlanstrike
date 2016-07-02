@@ -132,6 +132,9 @@ function OrlanStrike:Initialize(configName)
 		},
 		{
 			SpellId = 210191 -- Word of Glory
+		},
+		{
+			SpellId = 215661 -- Justicar's Vengeance
 		}
 	};
 end;
@@ -337,7 +340,8 @@ function OrlanStrike:CreateCastWindow()
 					self.BurstButton:CloneTo(
 					{
 						SpellId = 205191 -- Eye for an Eye
-					})
+					}),
+					self.JusticarsVengeanceButton:CloneTo({})
 				}
 			})),
 		self:CreateButton(
@@ -1233,6 +1237,11 @@ function OrlanStrike.ThreeHolyPowerButton:IsLackingMana()
 	return false;
 end;
 
+function OrlanStrike.ThreeHolyPowerButton:HasJusticarsVengeanceTalent()
+	local _, _, _, isTalentSelected, _, spellId = GetTalentInfo(5, 1, 1); -- Justicar's Vengeance
+	return (spellId == 215661) and isTalentSelected; -- Justicar's Vengeance
+end;
+
 function OrlanStrike.ThreeHolyPowerButton:IsUsable(gameState)
 	if not self.OrlanStrike.Button.IsUsable(self, gameState) then
 		return false;
@@ -1254,7 +1263,10 @@ function OrlanStrike.ThreeHolyPowerButton:UpdateGameState(gameState)
 
 	local cost = 3;
 	if gameState:HasTheFiresOfJustice() then
-		cost = 2;
+		cost = cost - 1;
+	end;
+	if gameState:HasDivinePurpose() then
+		cost = 0;
 	end;
 
 	if gameState.HolyPower < cost then
@@ -1262,6 +1274,17 @@ function OrlanStrike.ThreeHolyPowerButton:UpdateGameState(gameState)
 	else
 		gameState.HolyPower = gameState.HolyPower - cost;
 	end;
+end;
+
+function OrlanStrike.ThreeHolyPowerButton:GetReason(gameState)
+	local baseReason = OrlanStrike.Button.GetReason(self, gameState);
+	if baseReason == 0 then
+		return 0;
+	end;
+	if self:HasJusticarsVengeanceTalent() and (gameState.HealthPercent <= 0.2) then
+		return 0;
+	end;
+	return baseReason;
 end;
 
 OrlanStrike.TemplarsVerdictButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
@@ -1486,6 +1509,49 @@ function OrlanStrike.VariableButton:GetCooldownLength()
 		return self.ActiveChoice:GetCooldownLength();
 	end;
 	return nil;
+end;
+
+OrlanStrike.JusticarsVengeanceButton = OrlanStrike.HealthButton:CloneTo(
+{
+	SpellId = 215661
+});
+
+function OrlanStrike.JusticarsVengeanceButton:IsLackingMana()
+	return false;
+end;
+
+function OrlanStrike.JusticarsVengeanceButton:IsUsable(gameState)
+	if not self.OrlanStrike.HealthButton.IsUsable(self, gameState) then
+		return false;
+	end;
+
+	if gameState:HasDivinePurpose() then
+		return true;
+	end;
+
+	local cost = 5;
+	if gameState:HasTheFiresOfJustice() then
+		cost = cost - 1;
+	end;
+	return gameState.HolyPower >= cost;
+end;
+
+function OrlanStrike.JusticarsVengeanceButton:UpdateGameState(gameState)
+	self.OrlanStrike.Button.UpdateGameState(self, gameState);
+
+	local cost = 5;
+	if gameState:HasTheFiresOfJustice() then
+		cost = cost - 4;
+	end;
+	if gameState:HasDivinePurpose() then
+		cost = 0;
+	end;
+
+	if gameState.HolyPower < cost then
+		gameState.HolyPower = 0;
+	else
+		gameState.HolyPower = gameState.HolyPower - cost;
+	end;
 end;
 
 OrlanStrike:Initialize("OrlanStrikeConfig");
