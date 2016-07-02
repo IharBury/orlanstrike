@@ -132,6 +132,12 @@ function OrlanStrike:Initialize(configName)
 			SpellId = 210191 -- Word of Glory
 		},
 		{
+			SpellId = 156438 -- Healing Tonic
+		},
+		{
+			SpellId = 6262 -- Healthstone
+		},
+		{
 			SpellId = 215661 -- Justicar's Vengeance
 		}
 	};
@@ -204,10 +210,30 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.PotButton:CloneTo(
+			self.BurstPotButton:CloneTo(
 			{
 				Row = 1,
-				Column = 0
+				Column = 0,
+				SpellId = 156428, -- Draenic Strength Potion
+				ItemId = 109219 -- Draenic Strength Potion
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.HealingPotButton:CloneTo(
+			{
+				Row = 3,
+				Column = 2,
+				SpellId = 156438, -- Healing Tonic
+				ItemId = 109223 -- Healing Tonic
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.HealingPotButton:CloneTo(
+			{
+				Row = 3,
+				Column = 1,
+				SpellId = 6262, -- Healthstone
+				ItemId = 5512 -- Healthstone
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -1213,21 +1239,12 @@ function OrlanStrike.SlotButton:IsEmpty()
 	return false;
 end;
 
-OrlanStrike.PotButton = OrlanStrike.BurstButton:CloneTo(
-{
-	SpellId = 156428, -- Draenic Strength Potion
-	ItemId = 109219 -- Draenic Strength Potion
-});
+OrlanStrike.PotButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.PotButton:UpdateDisplay(window, gameState)
-	self.OrlanStrike.BurstButton.UpdateDisplay(self, window, gameState);
+	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
 
 	window.Text:SetText(tostring(GetItemCount(self.ItemId)));
-
-	if not self:IsAvailable() then
-		self.OrlanStrike:SetBorderColor(window, 0, 1, 1, 1);
-		window:SetAlpha(0.4);
-	end;
 end;
 
 function OrlanStrike.PotButton:SetupButton()
@@ -1254,6 +1271,32 @@ end;
 
 function OrlanStrike.PotButton:IsLackingMana()
 	return false;
+end;
+
+OrlanStrike.BurstPotButton = OrlanStrike.PotButton:CloneTo({});
+
+function OrlanStrike.BurstPotButton:UpdateDisplay(window, gameState)
+	self.OrlanStrike.PotButton.UpdateDisplay(self, window, gameState);
+
+	if self:GetReason(gameState) > 0 then
+		window:SetAlpha(1);
+		self.OrlanStrike:SetBorderColor(window, 1, 1, 1, 1);
+	end;
+
+	if not self:IsAvailable() then
+		self.OrlanStrike:SetBorderColor(window, 0, 1, 1, 1);
+		window:SetAlpha(0.4);
+	end;
+end;
+
+OrlanStrike.HealingPotButton = OrlanStrike.PotButton:CloneTo({});
+
+function OrlanStrike.HealingPotButton:GetReason(gameState)
+	if (gameState.HealthPercent <= 0.2) and 
+		(self.OrlanStrike.PotButton.GetReason(self, gameState) > 0) then
+		return 1;
+	end;
+	return 0;
 end;
 
 OrlanStrike.HolyPowerScalingButton = OrlanStrike.Button:CloneTo({});
