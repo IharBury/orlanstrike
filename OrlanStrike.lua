@@ -333,6 +333,10 @@ function OrlanStrike:CreateCastWindow()
 					self.WordOfGloryButton:CloneTo(
 					{
 						SpellId = 210191 -- Word of Glory
+					}),
+					self.BurstButton:CloneTo(
+					{
+						SpellId = 205191 -- Eye for an Eye
 					})
 				}
 			}))
@@ -395,9 +399,9 @@ function OrlanStrike:CreateButton(parent, prototype)
 	button.Text:SetTextColor(1, 1, 1, 1);
 	button.Text:SetShadowColor(0, 0, 0, 1);
 	button.Text:SetShadowOffset(-1, -1);
-	button.Text:SetTextHeight(self.ButtonSize / 2);
-	button.Text:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 0);
-	button.Text:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 2, 0);
+	button.Text:SetTextHeight(self.ButtonSize / 2.5);
+	button.Text:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -3, 0);
+	button.Text:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 3, 0);
 	button.Text:SetJustifyH("RIGHT");
 
 	button.Cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate");
