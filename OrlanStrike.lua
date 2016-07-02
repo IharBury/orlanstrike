@@ -120,12 +120,10 @@ function OrlanStrike:Initialize(configName)
 	self.HealingSpellPriorities =
 	{
 		{
-			SpellId = 19750, -- Flash of Light
-			Target = "player"
+			SpellId = 19750 -- Flash of Light
 		},
 		{
-			SpellId = 633, -- Lay on Hands
-			Target = "player"
+			SpellId = 633 -- Lay on Hands
 		},
 		{
 			SpellId = 642 -- Divine Shield
@@ -295,9 +293,17 @@ function OrlanStrike:CreateCastWindow()
 			castWindow, 
 			self.Button:CloneTo(
 			{
-				SpellId = 1022, -- Hand of Protection
+				SpellId = 1022, -- Blessing of Protection
+				Row = 4,
+				Column = 1
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 1044, -- Blessing of Freedom
 				Row = 5,
-				Column = 4
+				Column = 1
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -1342,8 +1348,7 @@ end;
 
 OrlanStrike.FlashOfLightButton = OrlanStrike.HealthButton:CloneTo(
 {
-	SpellId = 19750,
-	Target = "player"
+	SpellId = 19750
 });
 
 function OrlanStrike.FlashOfLightButton:UpdateGameState(gameState)
@@ -1353,8 +1358,7 @@ end;
 
 OrlanStrike.LayOnHandsButton = OrlanStrike.HealthButton:CloneTo(
 {
-	SpellId = 633,
-	Target = "player"
+	SpellId = 633
 });
 
 function OrlanStrike.LayOnHandsButton:UpdateGameState(gameState)
@@ -1364,8 +1368,7 @@ end;
 
 OrlanStrike.CleanseToxinsButton = OrlanStrike.Button:CloneTo(
 {
-	SpellId = 213644, -- Cleanse Toxins
-	Target = "player"
+	SpellId = 213644 -- Cleanse Toxins
 });
 
 function OrlanStrike.CleanseToxinsButton:IsUsable(gameState)
