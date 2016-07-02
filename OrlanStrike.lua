@@ -307,6 +307,14 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
+			self.Button:CloneTo(
+			{
+				SpellId = 183218, -- Hand of Hindrance
+				Row = 3,
+				Column = 4
+			})),
+		self:CreateButton(
+			castWindow, 
 			self.RebukeButton:CloneTo(
 			{
 				Row = 1,
@@ -361,6 +369,15 @@ function OrlanStrike:CreateCastWindow()
 			{
 				Row = 3,
 				Column = 3
+			})),
+		self:CreateButton(
+			castWindow, 
+			self.Button:CloneTo(
+			{
+				Row = 3,
+				Column = 0,
+				SpellId = 62124, -- Hand of Reckoning
+				DoesRequireTarget = true
 			})),
 		self:CreateButton(
 			castWindow, 
