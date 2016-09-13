@@ -132,7 +132,7 @@ function OrlanStrike:Initialize(configName)
 			SpellId = 210191 -- Word of Glory
 		},
 		{
-			SpellId = 156438 -- Healing Tonic
+			SpellId = 188016 -- Ancient Healing Potion
 		},
 		{
 			SpellId = 6262 -- Healthstone
@@ -212,10 +212,10 @@ function OrlanStrike:CreateCastWindow()
 			castWindow, 
 			self.BurstPotButton:CloneTo(
 			{
-				Row = 1,
+				Row = 3,
 				Column = 0,
-				SpellId = 156428, -- Draenic Strength Potion
-				ItemId = 109219 -- Draenic Strength Potion
+				SpellId = 188028, -- Potion of the Old War
+				ItemId = 127844 -- Potion of the Old War
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -223,8 +223,8 @@ function OrlanStrike:CreateCastWindow()
 			{
 				Row = 3,
 				Column = 2,
-				SpellId = 156438, -- Healing Tonic
-				ItemId = 109223 -- Healing Tonic
+				SpellId = 188016, -- Ancient Healing Potion
+				ItemId = 127834 -- Ancient Healing Potion
 			})),
 		self:CreateButton(
 			castWindow, 
@@ -422,28 +422,19 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.Button:CloneTo(
+			self.BurstButton:CloneTo(
 			{
-				Row = 3,
+				Row = 1,
 				Column = 0,
-				SpellId = 62124, -- Hand of Reckoning
-				DoesRequireTarget = true
+				SpellId = 205273 -- Wake of Ashes
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.VariableButton:CloneTo(
+			self.SealOfLightButton:CloneTo(
 			{
 				Row = 5,
-				Column = 0,
-				Choices =
-				{
-					self.Button:CloneTo(
-					{
-						SpellId = 205656 -- Divine Steed
-					}),
-					self.SealOfLightButton:CloneTo({})
-				}
-			})),
+				Column = 0
+			}))
 	};
 	self.SpellCount = 30;
 
