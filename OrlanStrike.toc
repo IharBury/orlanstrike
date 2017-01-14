@@ -1,7 +1,7 @@
-## Interface: 70000
+## Interface: 70100
 ## X-Min-Interface: 70000
 ## Title: OrlanStrike
-## Version: 3.1.0
+## Version: 3.1.1
 ## Notes: 
 ## SavedVariablesPerCharacter: OrlanStrikeConfig
 OrlanStrike.lua

@@ -357,14 +357,6 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow, 
-			self.GreaterBlessingButton:CloneTo(
-			{
-				SpellId = 203528, -- Greater Blessing of Might
-				Row = 5,
-				Column = 4
-			})),
-		self:CreateButton(
-			castWindow, 
 			self.RebukeButton:CloneTo(
 			{
 				Row = 1,
@@ -427,13 +419,6 @@ function OrlanStrike:CreateCastWindow()
 				Row = 1,
 				Column = 0,
 				SpellId = 205273 -- Wake of Ashes
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.SealOfLightButton:CloneTo(
-			{
-				Row = 5,
-				Column = 0
 			}))
 	};
 	self.SpellCount = 30;
@@ -1724,17 +1709,6 @@ function OrlanStrike.HolyWrathButton:GetReason(gameState)
 	return OrlanStrike.BurstButton.GetReason(self, gameState);
 end;
 
-OrlanStrike.SealOfLightButton = OrlanStrike.Button:CloneTo(
-{
-	SpellId = 202273
-});
-
-function OrlanStrike.SealOfLightButton:UpdateDisplay(window, gameState)
-	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
-
-	window.Text:SetText(tostring(gameState.HolyPower));
-end;
-
 OrlanStrike.GreaterBlessingButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.GreaterBlessingButton:UpdateDisplay(window, gameState)
@@ -1752,10 +1726,8 @@ function OrlanStrike.GreaterBlessingButton:GetReason(gameState)
 		return 0;
 	end;
 
-	local greaterBlessingCount = self.OrlanStrike:GetRaidBuffCount(203538) + -- Greater Blessing of Kings
-		self.OrlanStrike:GetRaidBuffCount(203539) + -- Greater Blessing of Wisdom
-		self.OrlanStrike:GetRaidBuffCount(203528); -- Greater Blessing of Might
-	if greaterBlessingCount < 3 then
+	local count = self.OrlanStrike:GetRaidBuffCount(self:GetSpellId());
+	if count < 1 then
 		return 2;
 	end;
 	return 1;
