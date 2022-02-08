@@ -291,8 +291,9 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow,
-			self.JusticarsVengeanceButton:CloneTo(
+			self.HealthButton:CloneTo(
 			{
+				SpellId = 184662, -- Shield of Vengeance
 				Row = 3,
 				Column = 2
 			})),
@@ -1280,49 +1281,6 @@ function OrlanStrike.RebukeButton:UpdateDisplay(window, gameState)
 		window:SetAlpha(1);
 	else
 		window:SetAlpha(0.1);
-	end;
-end;
-
-OrlanStrike.JusticarsVengeanceButton = OrlanStrike.HealthButton:CloneTo(
-{
-	SpellId = 215661
-});
-
-function OrlanStrike.JusticarsVengeanceButton:IsLackingMana()
-	return false;
-end;
-
-function OrlanStrike.JusticarsVengeanceButton:IsUsable(gameState)
-	if not self.OrlanStrike.HealthButton.IsUsable(self, gameState) then
-		return false;
-	end;
-
-	if gameState:HasDivinePurpose() then
-		return true;
-	end;
-
-	local cost = 5;
-	if gameState:HasTheFiresOfJustice() then
-		cost = cost - 1;
-	end;
-	return gameState.HolyPower >= cost;
-end;
-
-function OrlanStrike.JusticarsVengeanceButton:UpdateGameState(gameState)
-	self.OrlanStrike.Button.UpdateGameState(self, gameState);
-
-	local cost = 5;
-	if gameState:HasTheFiresOfJustice() then
-		cost = cost - 4;
-	end;
-	if gameState:HasDivinePurpose() then
-		cost = 0;
-	end;
-
-	if gameState.HolyPower < cost then
-		gameState.HolyPower = 0;
-	else
-		gameState.HolyPower = gameState.HolyPower - cost;
 	end;
 end;
 
