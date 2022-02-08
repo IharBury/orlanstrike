@@ -29,20 +29,20 @@ function OrlanStrike:Initialize(configName)
 	self.EventFrame = CreateFrame("Frame");
 	self.ButtonSize = 32;
 	self.ButtonSpacing = 5;
-	self.RowCount = 6;
-	self.ColumnCount = 5;
+	self.RowCount = 4;
+	self.ColumnCount = 4;
 	self.CastWindowHeight = self.ButtonSize * self.RowCount + self.ButtonSpacing * (self.RowCount + 1);
 	self.CastWindowWidth = self.ButtonSize * self.ColumnCount + self.ButtonSpacing * (self.ColumnCount + 1);
 
 	self.FrameRate = 10.0;
 
-	function self.EventFrame:HandleEvent(event, arg1, arg2, arg3, arg4, arg5)
+	function self.EventFrame:HandleEvent(event, arg1, arg2, arg3)
 		if (event == "ADDON_LOADED") and (arg1 == "OrlanStrike") then
 			orlanStrike:HandleLoaded();
 		elseif (event == "PLAYER_SPECIALIZATION_CHANGED") then
 			orlanStrike:HandleSpecChange();
-		elseif (event == "UNIT_SPELLCAST_START") and (arg1 == "player") then
-			orlanStrike:HandleAbilityUse(arg5);
+		elseif (event == "UNIT_SPELLCAST_SUCCEEDED") and (arg1 == "player") then
+			orlanStrike:HandleAbilityUse(arg3);
 		elseif (event == "SPELLS_CHANGED") or (event == "PLAYER_EQUIPMENT_CHANGED") then
 			orlanStrike:UpdateSpells();
 		end;
@@ -57,90 +57,102 @@ function OrlanStrike:Initialize(configName)
 	self.SingleTargetPriorities =
 	{
 		{
+			SpellId = 328620 -- Blessing of Summer
+		},
+		{
+			SpellId = 255937, -- Wake of Ashes
+			MinReason = 4 -- +3 holy power
+		},
+		{
+			SpellId = 24275, -- Hammer of Wrath
+			MinReason = 2 -- +1 holy power
+		},
+		{
 			SpellId = 184575, -- Blade of Justice
 			MinReason = 3 -- +2 holy power
 		},
 		{
-			SpellId = 20271 -- Judgment
+			SpellId = 20271, -- Judgment
+			MinReason = 2 -- +1 holy power
 		},
 		{
-			SpellId = 213757 -- Execution Sentence
+			SpellId = 35395, -- Crusader Strike
+			MinReason = 3 -- +1 holy power @ 2 charges, no Avenging Wrath, target > 20% health
+		},
+		{
+			SpellId = 53385 -- Divine Storm
 		},
 		{
 			SpellId = 85256 -- Templar's Verdict
 		},
 		{
-			SpellId = 53385 -- Divine Storm
+			SpellId = 26573 -- Consecration
 		},
 		{
 			SpellId = 35395, -- Crusader Strike
 			MinReason = 2 -- +1 holy power
 		},
 		{
-			SpellId = 184575 -- Blade of Justice
+			SpellId = 184575, -- Blade of Justice
+			MinReason = 2 -- +1 holy power
 		},
 		{
 			SpellId = 35395 -- Crusader Strike
+		},
+		{
+			SpellId = 184575 -- Blade of Justice
 		}
 	};
 	self.MultiTargetPriorities =
 	{
 		{
-			SpellId = 184575, -- Blade of Justice
-			MinReason = 4 -- +2 holy power, Divine Hammer
+			SpellId = 328620 -- Blessing of Summer
 		},
 		{
-			SpellId = 205228 -- Consecration
+			SpellId = 255937, -- Wake of Ashes
+			MinReason = 4 -- +3 holy power
+		},
+		{
+			SpellId = 24275, -- Hammer of Wrath
+			MinReason = 2 -- +1 holy power
 		},
 		{
 			SpellId = 184575, -- Blade of Justice
 			MinReason = 3 -- +2 holy power
 		},
 		{
-			SpellId = 20271 -- Judgment
+			SpellId = 20271, -- Judgment
+			MinReason = 2 -- +1 holy power
+		},
+		{
+			SpellId = 35395, -- Crusader Strike
+			MinReason = 3 -- +1 holy power @ 2 charges, no Avenging Wrath, target > 20% health
 		},
 		{
 			SpellId = 53385 -- Divine Storm
 		},
 		{
-			SpellId = 85256 -- Templar's Verdict
+			SpellId = 26573 -- Consecration
 		},
 		{
 			SpellId = 35395, -- Crusader Strike
 			MinReason = 2 -- +1 holy power
 		},
 		{
-			SpellId = 184575 -- Blade of Justice
+			SpellId = 85256 -- Templar's Verdict
+		},
+		{
+			SpellId = 184575, -- Blade of Justice
+			MinReason = 2 -- +1 holy power
 		},
 		{
 			SpellId = 35395 -- Crusader Strike
+		},
+		{
+			SpellId = 184575 -- Blade of Justice
 		}
 	};
 	self.MaxAbilityWaitTime = 0.1;
-	self.HealingSpellPriorities =
-	{
-		{
-			SpellId = 19750 -- Flash of Light
-		},
-		{
-			SpellId = 633 -- Lay on Hands
-		},
-		{
-			SpellId = 642 -- Divine Shield
-		},
-		{
-			SpellId = 210191 -- Word of Glory
-		},
-		{
-			SpellId = 188016 -- Ancient Healing Potion
-		},
-		{
-			SpellId = 6262 -- Healthstone
-		},
-		{
-			SpellId = 215661 -- Justicar's Vengeance
-		}
-	};
 end;
 
 function OrlanStrike:CreateCastWindow()
@@ -171,257 +183,128 @@ function OrlanStrike:CreateCastWindow()
 	castWindow.Buttons =
 	{
 		self:CreateButton(
-			castWindow, 
-			self.TemplarsVerdictButton:CloneTo(
+			castWindow,
+			self.BurstButton:CloneTo(
 			{
+				SpellId = 328620, -- Blessing of Summer
 				Row = 0,
-				Column = 2
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.HolyPowerGeneratorButton:CloneTo(
-			{
-				SpellId = 35395, -- Crusader Strike
-				Row = 0,
-				Column = 4,
-				DoesRequireTarget = true,
-				HolyPower = 1
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.BladeOfJusticeButton:CloneTo(
-			{
-				Row = 0,
-				Column = 3
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.JudgmentButton:CloneTo(
-			{
-				Row = 0,
-				Column = 1
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.DivineStormButton:CloneTo(
-			{
-				Row = 1,
-				Column = 2
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.BurstPotButton:CloneTo(
-			{
-				Row = 3,
-				Column = 0,
-				SpellId = 188028, -- Potion of the Old War
-				ItemId = 127844 -- Potion of the Old War
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.HealingPotButton:CloneTo(
-			{
-				Row = 3,
-				Column = 2,
-				SpellId = 188016, -- Ancient Healing Potion
-				ItemId = 127834 -- Ancient Healing Potion
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.HealingPotButton:CloneTo(
-			{
-				Row = 3,
-				Column = 1,
-				SpellId = 6262, -- Healthstone
-				ItemId = 5512 -- Healthstone
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.SlotButton:CloneTo(
-			{
-				Row = 2,
-				Column = 0,
-				SlotName = "Trinket0Slot"
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.SlotButton:CloneTo(
-			{
-				Row = 2,
-				Column = 1,
-				SlotName = "Trinket1Slot"
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.VariableButton:CloneTo(
-			{
-				Row = 2,
-				Column = 4,
-				Choices =
-				{
-					self.Button:CloneTo(
-					{
-						SpellId = 20066, -- Repentance
-						DoesRequireTarget = true
-					}),
-					self.Button:CloneTo(
-					{
-						SpellId = 115750 -- Blinding Light
-					})
-				}
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.Button:CloneTo(
-			{
-				Row = 1,
-				Column = 3,
-				SpellId = 853, -- Hammer of Justice
-				DoesRequireTarget = true
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.AvengingWrathButton:CloneTo(
-			{
-				Row = 1,
-				Column = 1
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.CleanseToxinsButton:CloneTo(
-			{
-				Row = 4,
 				Column = 0
 			})),
 		self:CreateButton(
-			castWindow, 
-			self.FlashOfLightButton:CloneTo(
-			{
-				Row = 4,
-				Column = 2
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.LayOnHandsButton:CloneTo(
-			{
-				Row = 4,
-				Column = 3
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.HealthButton:CloneTo(
-			{
-				SpellId = 642, -- Divine Shield
-				Row = 4,
-				Column = 4
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.Button:CloneTo(
-			{
-				SpellId = 1022, -- Blessing of Protection
-				Row = 4,
-				Column = 1
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.Button:CloneTo(
-			{
-				SpellId = 1044, -- Blessing of Freedom
-				Row = 5,
-				Column = 1
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.Button:CloneTo(
-			{
-				SpellId = 183218, -- Hand of Hindrance
-				Row = 3,
-				Column = 4
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.GreaterBlessingButton:CloneTo(
-			{
-				SpellId = 203538, -- Greater Blessing of Kings
-				Row = 5,
-				Column = 2
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.GreaterBlessingButton:CloneTo(
-			{
-				SpellId = 203539, -- Greater Blessing of Wisdom
-				Row = 5,
-				Column = 3
-			})),
-		self:CreateButton(
-			castWindow, 
-			self.RebukeButton:CloneTo(
+			castWindow,
+			self.WakeOfAshesButton:CloneTo(
 			{
 				Row = 1,
-				Column = 4
+				Column = 0
 			})),
 		self:CreateButton(
-			castWindow, 
-			self.VariableButton:CloneTo(
+			castWindow,
+			self.Button:CloneTo(
 			{
 				Row = 0,
-				Column = 0,
-				Choices =
-				{
-					self.ThreeHolyPowerButton:CloneTo(
-					{
-						SpellId = 213757, -- Execution Sentence
-						DoesRequireTarget = true
-					}),
-					self.Button:CloneTo(
-					{
-						SpellId = 205228 -- Consecration
-					})
-				}
+				Column = 1,
+				SpellId = 24275 -- Hammer of Wrath
 			})),
 		self:CreateButton(
-			castWindow, 
-			self.VariableButton:CloneTo(
+			castWindow,
+			self.BladeOfJusticeButton:CloneTo(
+			{
+				Row = 1,
+				Column = 1
+			})),
+		self:CreateButton(
+			castWindow,
+			self.JudgmentButton:CloneTo(
+			{
+				Row = 0,
+				Column = 2
+			})),
+		self:CreateButton(
+			castWindow,
+			self.CrusaderStrikeButton:CloneTo(
+			{
+				Row = 1,
+				Column = 2
+			})),
+		self:CreateButton(
+			castWindow,
+			self.Button:CloneTo(
+			{
+				SpellId = 26573, -- Consecration
+				Row = 0,
+				Column = 3
+			})),
+		self:CreateButton(
+			castWindow,
+			OrlanStrike.DivineStormButton:CloneTo(
+			{
+				Row = 1,
+				Column = 3
+			})),
+		self:CreateButton(
+			castWindow,
+			self.AvengingWrathButton:CloneTo(
+			{
+				Row = 2,
+				Column = 0
+			})),
+		self:CreateButton(
+			castWindow,
+			self.BurstPotButton:CloneTo(
+			{
+				Row = 2,
+				Column = 1,
+				SpellId = 307164, -- Potion of Spectral Strength
+				ItemId = 171275 -- Potion of Spectral Strength
+			})),
+		self:CreateButton(
+			castWindow,
+			self.SlotButton:CloneTo(
 			{
 				Row = 2,
 				Column = 2,
-				Choices =
-				{
-					self.WordOfGloryButton:CloneTo({}),
-					self.BurstButton:CloneTo(
-					{
-						SpellId = 205191 -- Eye for an Eye
-					}),
-					self.JusticarsVengeanceButton:CloneTo({})
-				}
+				SlotName = "Trinket0Slot"
 			})),
 		self:CreateButton(
-			castWindow, 
-			self.BurstButton:CloneTo(
+			castWindow,
+			self.SlotButton:CloneTo(
 			{
 				Row = 2,
 				Column = 3,
-				SpellId = 184662 -- Shield of Vengeance
+				SlotName = "Trinket1Slot"
 			})),
 		self:CreateButton(
-			castWindow, 
-			self.HolyWrathButton:CloneTo(
+			castWindow,
+			self.ThreeHolyPowerButton:CloneTo(
+			{
+				SpellId = 85256, -- Templar's Verdict
+				DoesRequireTarget = true,
+				Row = 3,
+				Column = 0
+			})),
+		self:CreateButton(
+			castWindow,
+			self.CleanseToxinsButton:CloneTo(
+			{
+				Row = 3,
+				Column = 1
+			})),
+		self:CreateButton(
+			castWindow,
+			self.JusticarsVengeanceButton:CloneTo(
+			{
+				Row = 3,
+				Column = 2
+			})),
+		self:CreateButton(
+			castWindow,
+			self.RebukeButton:CloneTo(
 			{
 				Row = 3,
 				Column = 3
 			})),
-		self:CreateButton(
-			castWindow, 
-			self.BurstButton:CloneTo(
-			{
-				Row = 1,
-				Column = 0,
-				SpellId = 205273 -- Wake of Ashes
-			}))
 	};
-	self.SpellCount = 30;
+	self.SpellCount = 16;
 
 	castWindow.HolyPowerBar = castWindow:CreateTexture();
 	castWindow.HolyPowerBar:SetPoint("BOTTOMLEFT", castWindow, "TOPLEFT", 0, 0);
@@ -455,7 +338,6 @@ function OrlanStrike:UpdateSpells()
 
 	self.SingleTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.SingleTargetPriorities);
 	self.MultiTargetPriorityIndexes = self:CalculateSpellPriorityIndexes(self.MultiTargetPriorities);
-	self.HealingSpellPriorityIndexes = self:CalculateSpellPriorityIndexes(self.HealingSpellPriorities);
 end;
 
 function OrlanStrike:CreateButton(parent, prototype)
@@ -547,7 +429,7 @@ function OrlanStrike:HandleLoaded()
 	self:Show();
 
 	self.EventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED");
-	self.EventFrame:RegisterEvent("UNIT_SPELLCAST_START");
+	self.EventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED");
 	self.EventFrame:RegisterEvent("SPELLS_CHANGED");
 	self.EventFrame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED");
 
@@ -654,24 +536,22 @@ end;
 
 function OrlanStrike:DetectForbearance()
 	local forbearanceSpellName = GetSpellInfo(25771); -- Forbearance
-	self.HasForbearance = UnitDebuff("player", forbearanceSpellName);
+	self.HasForbearance = AuraUtil.FindAuraByName("player", forbearanceSpellName) == nil;
 end;
 
 function OrlanStrike:DetectDispellableDebuffs()
-	local debuffIndex = 1;
-	while true do
-		local debuffName, _, _, _, dispelType = UnitDebuff("player", debuffIndex);
-		if not debuffName then
-			self.HasDispellableDebuff = false;
-			break;
-		end;
-		if (dispelType == "Disease") or (dispelType == "Poison") then
-			self.HasDispellableDebuff = true;
-			break;
-		end;
-
-		debuffIndex = debuffIndex + 1;
-	end;
+	self.HasDispellableDebuff = false;
+	AuraUtil.ForEachAura(
+		"player",
+		"HARMFUL",
+		nil,
+		function(_, _, _, dispelType, ...)
+			if (dispelType == "Disease") or (dispelType == "Poison") then
+				self.HasDispellableDebuff = true;
+				return true;
+			end;
+			return false;
+		end);
 end;
 
 function OrlanStrike:DetectAuras()
@@ -684,8 +564,8 @@ function OrlanStrike:DetectHealthPercent()
 end;
 
 function OrlanStrike:DetectManaPercent()
-	local mana = UnitPower("player", SPELL_POWER_MANA);
-	local maxMana = UnitPowerMax("player", SPELL_POWER_MANA);
+	local mana = UnitPower("player", Enum.PowerType.Mana);
+	local maxMana = UnitPowerMax("player", Enum.PowerType.Mana);
 	if (not mana) or (not maxMana) or (maxMana == 0) then
 		self.ManaPercent = 0;
 	else
@@ -791,19 +671,24 @@ function OrlanStrike:GetCurrentGameState()
 	local gameState =
 	{
 		CloneTo = self.CloneTo,
-		HolyPower = UnitPower("player", SPELL_POWER_HOLY_POWER), 
+		HolyPower = UnitPower("player", Enum.PowerType.HolyPower), 
 		Time = self.GcdExpiration,
-		DivinePurposeExpirationTime = select(7, UnitBuff("player", GetSpellInfo(223819))),
+		DivinePurposeExpirationTime = select(6, AuraUtil.FindAuraByName("player", GetSpellInfo(223819))),
 		HasDivinePurpose = function(self)
 			return self.DivinePurposeExpirationTime and
 				self.DivinePurposeExpirationTime > self.Time;
 		end,
-		AvengingWrathExpirationTime = select(7, UnitBuff("player", GetSpellInfo(31884))),
+		EmpyreanPowerExpirationTime = select(6, AuraUtil.FindAuraByName("player", GetSpellInfo(326733))),
+		HasEmpyreanPower = function(self)
+			return self.EmpyreanPowerExpirationTime and
+				self.EmpyreanPowerExpirationTime > self.Time;
+		end,
+		AvengingWrathExpirationTime = select(6, AuraUtil.FindAuraByName("player", GetSpellInfo(31884))),
 		HasAvengingWrath = function(self)
 			return self.AvengingWrathExpirationTime and
 				self.AvengingWrathExpirationTime > self.Time;
 		end,
-		TheFiresOfJusticeExpirationTime = select(7, UnitBuff("player", GetSpellInfo(209785))),
+		TheFiresOfJusticeExpirationTime = select(6, AuraUtil.FindAuraByName("player", GetSpellInfo(209785))),
 		HasTheFiresOfJustice = function(self)
 			return self.TheFiresOfJusticeExpirationTime and
 				self.TheFiresOfJusticeExpirationTime > self.Time;
@@ -867,19 +752,6 @@ function OrlanStrike:UpdateStatus()
 		if button then
 			self:UpdateButtonCooldown(button);
 		end;
-	end;
-
-	local healingSpellIndex = 1;
-	while self.HealingSpellPriorityIndexes[healingSpellIndex] do
-		local priorityIndex = self.HealingSpellPriorityIndexes[healingSpellIndex];
-		if self:IsPrioritySpell(priorityIndex, self:GetCurrentGameState()) then
-			local button = self.CastWindow.Buttons[priorityIndex.Index];
-			self:SetBorderColor(button, 1, 0.5, 0.5, 1);
-			button:SetAlpha(1);
-			break;
-		end;
-
-		healingSpellIndex = healingSpellIndex + 1;
 	end;
 end;
 
@@ -975,61 +847,6 @@ function OrlanStrike:GetSpellsToCast(priorityIndexes)
 	return firstSpellIndex, nextSpellIndex;
 end;
 
-function OrlanStrike:GetRaidBuffCount(spellId)
-	local count = 0;
-	local duration = self:GetPlayerCastUnitBuffCooldown("player", spellId);
-	if duration and (duration ~= 0) then
-		count = count + 1;
-	end;
-
-	duration = self:GetPlayerCastUnitBuffCooldown("pet", spellId);
-	if duration and (duration ~= 0) then
-		count = count + 1;
-	end;
-
-	for i = 1, 4 do
-		duration = self:GetPlayerCastUnitBuffCooldown("party" .. i, spellId);
-		if duration and (duration ~= 0) then
-			count = count + 1;
-		end;
-
-		duration = self:GetPlayerCastUnitBuffCooldown("partypet" .. i, spellId);
-		if duration and (duration ~= 0) then
-			count = count + 1;
-		end;
-	end;
-
-	for i = 1, 40 do
-		duration = self:GetPlayerCastUnitBuffCooldown("raid" .. i, spellId);
-		if duration and (duration ~= 0) then
-			count = count + 1;
-		end;
-
-		duration = self:GetPlayerCastUnitBuffCooldown("raidpet" .. i, spellId);
-		if duration and (duration ~= 0) then
-			count = count + 1;
-		end;
-	end;
-
-	return count;
-end;
-
-function OrlanStrike:GetPlayerCastUnitBuffCooldown(unit, spellId)
-	local i = 1;
-	while true do
-		local _, _, _, count, _, duration, expirationTime, _, _, _, buffId = UnitBuff(unit, i, "PLAYER");
-		if not buffId then
-			return;
-		end;
-
-		if buffId == spellId then
-			return duration, expirationTime, count;
-		end;
-
-		i = i + 1;
-	end;
-end;
-
 function OrlanStrike:UpdateButtonCooldown(button)
 	if not button:IsEmpty() then
 		local start, duration, enabled = button:GetCooldown();
@@ -1083,7 +900,7 @@ function OrlanStrike.Button:UpdateGameState(gameState)
 end;
 
 function OrlanStrike.Button:GetCooldown()
-	return GetSpellCooldown(GetSpellInfo(self:GetSpellId()));
+	return GetSpellCooldown(self:GetSpellId());
 end;
 
 function OrlanStrike.Button:IsLearned()
@@ -1182,9 +999,13 @@ end;
 
 OrlanStrike.HolyPowerGeneratorButton = OrlanStrike.Button:CloneTo({});
 
+function OrlanStrike.HolyPowerGeneratorButton:GetHolyPower()
+	return self.HolyPower;
+end;
+
 function OrlanStrike.HolyPowerGeneratorButton:GetNewHolyPower(gameState)
-	local newHolyPower = gameState.HolyPower + self.HolyPower;
-	local maxHolyPower = UnitPowerMax("player", SPELL_POWER_HOLY_POWER);
+	local newHolyPower = gameState.HolyPower + self:GetHolyPower();
+	local maxHolyPower = UnitPowerMax("player", Enum.PowerType.HolyPower);
 	if newHolyPower > maxHolyPower then
 		newHolyPower = maxHolyPower;
 	end;
@@ -1213,36 +1034,29 @@ end;
 OrlanStrike.BladeOfJusticeButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 {
 	SpellId = 184575,
-	HolyPower = 2
+	DoesRequireTarget = true
 });
 
-function OrlanStrike.BladeOfJusticeButton:HasDivineHammerTalent()
-	local _, _, _, isTalentSelected, _, spellId = GetTalentInfo(4, 3, 1); -- Divine Hammer
-	return (spellId == 198034) and isTalentSelected; -- Divine Hammer
-end;
-
-function OrlanStrike.BladeOfJusticeButton:DoesRequireTargetCore()
-	return not self:HasDivineHammerTalent();
-end;
-
--- 0 -- no reason
--- 1 -- just damage
--- 2 -- +1 holy power
--- 3 -- +2 holy power, not Divine Hammer
--- 4 -- +2 holy power, Divine Hammer
-function OrlanStrike.BladeOfJusticeButton:GetReason(gameState)
-	local baseReason = OrlanStrike.HolyPowerGeneratorButton.GetReason(self, gameState);
-	if (baseReason == 3) and self:HasDivineHammerTalent() then
-		return 4;
+function OrlanStrike.BladeOfJusticeButton:GetHolyPower()
+	if UnitLevel("player") >= 34 then
+		return 2;
 	end;
-	return baseReason;
+	return 1;
 end;
 
-OrlanStrike.JudgmentButton = OrlanStrike.Button:CloneTo(
+OrlanStrike.JudgmentButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 {
 	SpellId = 20271,
 	DoesRequireTarget = true
 });
+
+
+function OrlanStrike.JudgmentButton:GetHolyPower()
+	if UnitLevel("player") >= 16 then
+		return 1;
+	end;
+	return 0;
+end;
 
 OrlanStrike.BurstButton = OrlanStrike.Button:CloneTo({});
 
@@ -1349,33 +1163,6 @@ function OrlanStrike.BurstPotButton:UpdateDisplay(window, gameState)
 	end;
 end;
 
-OrlanStrike.HealingPotButton = OrlanStrike.PotButton:CloneTo({});
-
-function OrlanStrike.HealingPotButton:GetReason(gameState)
-	if (gameState.HealthPercent <= 0.2) and 
-		(self.OrlanStrike.PotButton.GetReason(self, gameState) > 0) then
-		return 1;
-	end;
-	return 0;
-end;
-
-OrlanStrike.HolyPowerScalingButton = OrlanStrike.Button:CloneTo({});
-
-function OrlanStrike.HolyPowerScalingButton:IsLackingMana()
-	return false;
-end;
-
-function OrlanStrike.HolyPowerScalingButton:IsUsable(gameState)
-	return self.OrlanStrike.Button.IsUsable(self, gameState) and 
-		(gameState.HolyPower > 0);
-end;
-
-function OrlanStrike.HolyPowerScalingButton:UpdateGameState(gameState)
-	self.OrlanStrike.Button.UpdateGameState(self, gameState);
-
-	gameState.HolyPower = 0;
-end;
-
 OrlanStrike.ThreeHolyPowerButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.ThreeHolyPowerButton:IsLackingMana()
@@ -1392,20 +1179,10 @@ function OrlanStrike.ThreeHolyPowerButton:IsUsable(gameState)
 		return false;
 	end;
 
-	if gameState:HasDivinePurpose() then
-		return true;
-	end;
-
-	local cost = 3;
-	if gameState:HasTheFiresOfJustice() then
-		cost = cost - 1;
-	end;
-	return gameState.HolyPower >= cost;
+	return gameState.HolyPower >= self:GetHolyPowerCost(gameState);
 end;
 
-function OrlanStrike.ThreeHolyPowerButton:UpdateGameState(gameState)
-	self.OrlanStrike.Button.UpdateGameState(self, gameState);
-
+function OrlanStrike.ThreeHolyPowerButton:GetHolyPowerCost(gameState)
 	local cost = 3;
 	if gameState:HasTheFiresOfJustice() then
 		cost = cost - 1;
@@ -1413,6 +1190,13 @@ function OrlanStrike.ThreeHolyPowerButton:UpdateGameState(gameState)
 	if gameState:HasDivinePurpose() then
 		cost = 0;
 	end;
+	return cost;
+end;
+
+function OrlanStrike.ThreeHolyPowerButton:UpdateGameState(gameState)
+	self.OrlanStrike.Button.UpdateGameState(self, gameState);
+
+	local cost = self:GetHolyPowerCost(gameState);
 
 	if gameState.HolyPower < cost then
 		gameState.HolyPower = 0;
@@ -1432,63 +1216,32 @@ function OrlanStrike.ThreeHolyPowerButton:GetReason(gameState)
 	return baseReason;
 end;
 
-OrlanStrike.TemplarsVerdictButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
-{
-	SpellId = 85256,
-	DoesRequireTarget = true
-});
-
 OrlanStrike.DivineStormButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
 {
-	SpellId = 53385
+	SpellId = 53385 -- Divine Storm
 });
 
-OrlanStrike.WordOfGloryButton = OrlanStrike.ThreeHolyPowerButton:CloneTo(
-{
-	SpellId = 210191
-});
-
-function OrlanStrike.WordOfGloryButton:GetReason(gameState)
-	if (gameState.HealthPercent <= 0.2) and 
-		(self.OrlanStrike.ThreeHolyPowerButton.GetReason(self, gameState) > 0) then
-		return 1;
+function OrlanStrike.DivineStormButton:GetHolyPowerCost(gameState)
+	if gameState:HasEmpyreanPower() then
+		return 0;
 	end;
-	return 0;
+	return OrlanStrike.ThreeHolyPowerButton.GetHolyPowerCost(self, gameState);
 end;
 
 OrlanStrike.HealthButton = OrlanStrike.Button:CloneTo({});
 
 function OrlanStrike.HealthButton:GetReason(gameState)
-	if (gameState.HealthPercent <= 0.2) and 
+	if (gameState.HealthPercent <= 0.3) and 
 		(self.OrlanStrike.Button.GetReason(self, gameState) > 0) then
 		return 1;
 	end;
 	return 0;
 end;
 
-OrlanStrike.FlashOfLightButton = OrlanStrike.HealthButton:CloneTo(
-{
-	SpellId = 19750
-});
-
-function OrlanStrike.FlashOfLightButton:UpdateGameState(gameState)
-	self.OrlanStrike.HealthButton.UpdateGameState(self, gameState);
-	gameState.HealthPercent = gameState.HealthPercent + 0.1;
-end;
-
-OrlanStrike.LayOnHandsButton = OrlanStrike.HealthButton:CloneTo(
-{
-	SpellId = 633
-});
-
-function OrlanStrike.LayOnHandsButton:UpdateGameState(gameState)
-	self.OrlanStrike.HealthButton.UpdateGameState(self, gameState);
-	gameState.HealthPercent = 1;
-end;
-
 OrlanStrike.CleanseToxinsButton = OrlanStrike.Button:CloneTo(
 {
-	SpellId = 213644 -- Cleanse Toxins
+	SpellId = 213644,
+	Target = "player"
 });
 
 function OrlanStrike.CleanseToxinsButton:IsUsable(gameState)
@@ -1510,7 +1263,7 @@ OrlanStrike.RebukeButton = OrlanStrike.Button:CloneTo(
 });
 
 function OrlanStrike.RebukeButton:GetReason(gameState)
-	local spell, _, _, _, _, _, _, _, nonInterruptible = UnitCastingInfo("target");
+	local spell, _, _, _, _, _, _, nonInterruptible = UnitCastingInfo("target");
 	if (self.OrlanStrike.Button.GetReason(self, gameState) > 0) and 
 		spell and 
 		not nonInterruptible then
@@ -1528,129 +1281,6 @@ function OrlanStrike.RebukeButton:UpdateDisplay(window, gameState)
 	else
 		window:SetAlpha(0.1);
 	end;
-end;
-
-OrlanStrike.VariableButton = OrlanStrike.Button:CloneTo({});
-
-function OrlanStrike.VariableButton:UpdateSpells()
-	local activeChoice;
-	table.foreach(
-		self.Choices,
-		function (index, choice)
-			choice.OrlanStrike = self.OrlanStrike;
-			choice.Spell = self.Spell;
-			choice.Background = self.Background;
-			choice.Text = self.Text;
-			if IsSpellKnown(choice:GetSpellId()) then
-				activeChoice = choice;
-			end;
-		end);
-
-	self.ActiveChoice = activeChoice;	
-
-	self:SetupButton();
-	if self.ActiveChoice then
-		self.ActiveChoice:UpdateSpells();
-	end;
-end;
-
-function OrlanStrike.VariableButton:SetupButton()
-	if self.ActiveChoice then
-		self.ActiveChoice:SetupButton();
-		return;
-	end;
-	OrlanStrike.Button.SetupButton(self);
-end;
-
-function OrlanStrike.VariableButton:IsUsable(gameState)
-	if self.ActiveChoice then
-		return self.ActiveChoice:IsUsable(gameState);
-	end;
-	return false;
-end;
-
-function OrlanStrike.VariableButton:GetReason(gameState)
-	if self.ActiveChoice then
-		return self.ActiveChoice:GetReason(gameState);
-	end;
-	return 0;
-end;
-
-function OrlanStrike.VariableButton:UpdateDisplay(window, gameState)
-	if self.ActiveChoice then
-		self.ActiveChoice:UpdateDisplay(window, gameState);
-	else
-		window:SetAlpha(0);
-	end;
-end;
-
-function OrlanStrike.VariableButton:GetSpellId()
-	if self.ActiveChoice then
-		return self.ActiveChoice:GetSpellId();
-	end;
-	return nil;
-end;
-
-function OrlanStrike.VariableButton:IsLearned()
-	if self.ActiveChoice then
-		return self.ActiveChoice:IsLearned();
-	end;
-	return false;
-end;
-
-function OrlanStrike.VariableButton:IsLackingMana()
-	if self.ActiveChoice then
-		return self.ActiveChoice:IsLackingMana();
-	end;
-	return false;
-end;
-
-function OrlanStrike.VariableButton:IsEmpty()
-	if self.ActiveChoice then
-		return self.ActiveChoice:IsEmpty();
-	end;
-	return true;
-end;
-
-function OrlanStrike.VariableButton:IsAvailable()
-	if self.ActiveChoice then
-		return self.ActiveChoice:IsAvailable();
-	end;
-	return false;
-end;
-
-function OrlanStrike.VariableButton:DoesRequireTargetCore()
-	if self.ActiveChoice then
-		return self.ActiveChoice:DoesRequireTargetCore();
-	end;
-	return false;
-end;
-
-function OrlanStrike.VariableButton:UpdateGameState(gameState)
-	if self.ActiveChoice then
-		self.ActiveChoice:UpdateGameState(gameState);
-	end;
-end;
-
-function OrlanStrike.VariableButton:GetCooldownExpiration()
-	if self.ActiveChoice then
-		return self.ActiveChoice:GetCooldownExpiration();
-	end;
-	return GetTime();
-end;
-
-function OrlanStrike.VariableButton:GetSharedCooldownSpellId()
-	if self.ActiveChoice then
-		return self.ActiveChoice:GetSharedCooldownSpellId();
-	end;
-	return nil;
-end;
-
-function OrlanStrike.VariableButton:GetCooldownLength()
-	if self.ActiveChoice then
-		return self.ActiveChoice:GetCooldownLength();
-	end;
-	return nil;
 end;
 
 OrlanStrike.JusticarsVengeanceButton = OrlanStrike.HealthButton:CloneTo(
@@ -1696,41 +1326,53 @@ function OrlanStrike.JusticarsVengeanceButton:UpdateGameState(gameState)
 	end;
 end;
 
-OrlanStrike.HolyWrathButton = OrlanStrike.BurstButton:CloneTo(
+OrlanStrike.WakeOfAshesButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
 {
-	SpellId = 210220
+	SpellId = 255937,
+	HolyPower = 3
 });
 
-function OrlanStrike.HolyWrathButton:GetReason(gameState)
-	if gameState.HealthPercent > 0.5 then
-		return 0;
-	end;
+function OrlanStrike.WakeOfAshesButton:UpdateDisplay(window, gameState)
+	self.OrlanStrike.HolyPowerGeneratorButton.UpdateDisplay(self, window, gameState);
 
-	return OrlanStrike.BurstButton.GetReason(self, gameState);
-end;
-
-OrlanStrike.GreaterBlessingButton = OrlanStrike.Button:CloneTo({});
-
-function OrlanStrike.GreaterBlessingButton:UpdateDisplay(window, gameState)
-	self.OrlanStrike.Button.UpdateDisplay(self, window, gameState);
-
-	window.Text:SetText(tostring(self.OrlanStrike:GetRaidBuffCount(self:GetSpellId())));
-
-	if self:GetReason(gameState) >= 2 then
+	if self:GetReason(gameState) >= 4 then
 		window:SetAlpha(1);
+		self.OrlanStrike:SetBorderColor(window, 1, 1, 1, 1);
 	end;
 end;
 
-function OrlanStrike.GreaterBlessingButton:GetReason(gameState)
-	if self.OrlanStrike.Button.GetReason(self, gameState) == 0 then
-		return 0;
+OrlanStrike.CrusaderStrikeButton = OrlanStrike.HolyPowerGeneratorButton:CloneTo(
+{
+	SpellId = 35395,
+	DoesRequireTarget = true,
+	HolyPower = 1
+});
+
+-- 0 -- no reason
+-- 1 -- just damage
+-- 2 -- +1 holy power @ 1 charge or Avenging Wrath or <20% target health
+-- 3 -- +1 holy power @ 2 charges
+function OrlanStrike.HolyPowerGeneratorButton:GetReason(gameState)
+	local baseReason = OrlanStrike.CrusaderStrikeButton.GetReason(self, gameState);
+	if baseReason < 2 then
+		return baseReason;
 	end;
 
-	local count = self.OrlanStrike:GetRaidBuffCount(self:GetSpellId());
-	if count < 1 then
+	if gameState.HasAvengingWrath() then
 		return 2;
 	end;
-	return 1;
+
+	local targetHealth = UnitHealth("target");
+	if (targetHealth > 0) and (targetHealth * 5 < UnitMaxHealth("target")) then
+		return 2;
+	end;
+
+	local charges = GetSpellCharges(GetSpellInfo(self:GetSpellId()));
+	if charges >= 2 then
+		return 3;
+	end;
+
+	return baseReason;
 end;
 
 OrlanStrike:Initialize("OrlanStrikeConfig");
