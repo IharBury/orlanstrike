@@ -203,7 +203,9 @@ function OrlanStrike:CreateCastWindow()
 			{
 				Row = 0,
 				Column = 1,
-				SpellId = 24275 -- Hammer of Wrath
+				SpellId = 24275, -- Hammer of Wrath
+				HolyPower = 1,
+				DoesRequireTarget = true
 			})),
 		self:CreateButton(
 			castWindow,
