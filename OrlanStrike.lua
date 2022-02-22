@@ -199,7 +199,7 @@ function OrlanStrike:CreateCastWindow()
 			})),
 		self:CreateButton(
 			castWindow,
-			self.Button:CloneTo(
+			self.HolyPowerGeneratorButton:CloneTo(
 			{
 				Row = 0,
 				Column = 1,
