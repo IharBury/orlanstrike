@@ -1318,12 +1318,12 @@ function OrlanStrike.HolyPowerGeneratorButton:GetReason(gameState)
 		return baseReason;
 	end;
 
-	if gameState.HasAvengingWrath() then
+	if gameState:HasAvengingWrath() then
 		return 2;
 	end;
 
 	local targetHealth = UnitHealth("target");
-	if (targetHealth > 0) and (targetHealth * 5 < UnitMaxHealth("target")) then
+	if (targetHealth > 0) and (targetHealth * 5 < UnitHealthMax("target")) then
 		return 2;
 	end;
 
